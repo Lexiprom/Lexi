@@ -982,9 +982,16 @@ function buildAdaptiveSession(cards,mode='deck'){
  if(mode==='folder')eligible=cards.filter(c=>c.seen&&(cardLevel(c)!=='good'||isGoodDue(c)));
  else if(mode==='review')eligible=cards.filter(c=>c.seen);
  else eligible=cards;
+
  if(mode==='deck'&&eligible.some(c=>!c.seen)){
-   // New deck: first show every new word as information, not as a test.
-   return shuffle(eligible).map(c=>makePrompt(c,false)).map(p=>{p.intro=!p.card.seen;return p});
+   let unseen=shuffle(eligible.filter(c=>!c.seen));
+   let seen=shuffle(eligible.filter(c=>c.seen));
+   // Every unseen card appears exactly once as an introduction.
+   // Cards already introduced before an interrupted session return as normal tests.
+   return [
+     ...unseen.map(c=>{let p=makePrompt(c,false);p.intro=true;return p}),
+     ...seen.map(c=>makePrompt(c,false))
+   ];
  }
  return shuffle(eligible).map(c=>{
    if(!c.seen)return makePrompt(c,false);
@@ -996,7 +1003,7 @@ function buildAdaptiveSession(cards,mode='deck'){
 let studyMode='deck', studySourceCards=[];
 function start(id){
  cur=ds.find(x=>x.id===id);if(!cur)return;
- studyMode=cur.cards.some(c=>c.seen)?'review':'deck';
+ studyMode=cur.cards.some(c=>!c.seen)?'deck':'review';
  studySourceCards=cur.cards;q=buildAdaptiveSession(cur.cards,studyMode);
  qi=0;$('sn').textContent=cur.name;go('study');load();saveStudySession()
 }
@@ -1058,7 +1065,7 @@ function scheduleRepeat(prompt,rating){
  }
 }
 function load(){
- if(qi>=q.length){clearStudySession();saveAll();let a=studySourceCards||[],s=a.filter(c=>c.seen),g=s.filter(c=>cardLevel(c)==='good').length,h=s.filter(c=>cardLevel(c)==='hard').length,b=s.filter(c=>cardLevel(c)==='bad').length;alert(`Сесію завершено.\nЗнаю: ${g} · Важко: ${h} · Не знаю: ${b}`);go('home');return}
+ if(qi>=q.length){clearStudySession();saveAll();let a=studySourceCards||[],s=a.filter(c=>c.seen),g=s.filter(c=>cardLevel(c)==='good').length,h=s.filter(c=>cardLevel(c)==='hard').length,b=s.filter(c=>cardLevel(c)==='bad').length,n=a.filter(c=>!c.seen).length;alert(`Сесію завершено.\nЗнаю: ${g} · Важко: ${h} · Не знаю: ${b}${n?` · Не пройдено: ${n}`:''}`);go('home');return}
  rev=false;let pr=q[qi],c=pr.card;
  if(pr.intro){
    $('sf').textContent=c.f;$('sb').textContent=c.b;$('sb').style.display='block';
@@ -1083,9 +1090,16 @@ function load(){
 function finishIntro(){
  let pr=q[qi],c=pr.card;
  c.seen=true;
- // Test this newly introduced word after several other cards.
- let test=makePrompt(c,false),pos=Math.min(q.length,qi+3+Math.floor(Math.random()*4));
- q.splice(pos,0,test);qi++;saveAll();saveStudySession();load();
+ let test=makePrompt(c,false);
+ // First show every new word once. Only then begin testing.
+ // This guarantees that no word is skipped and no word gets an unfair extra early repetition.
+ let lastIntro=qi;
+ for(let i=qi+1;i<q.length;i++)if(q[i].intro)lastIntro=i;
+ let testStart=lastIntro+1;
+ let testCount=Math.max(0,q.length-testStart);
+ let pos=Math.min(q.length,testStart+Math.floor(Math.random()*(testCount+1)));
+ q.splice(pos,0,test);
+ qi++;saveAll();saveStudySession();load();
 }
 function reveal(){
  if(rev)return;rev=true;$('sb').style.display='block';
