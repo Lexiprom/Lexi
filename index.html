@@ -1,0 +1,1129 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lexi Photo</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<style>
+:root{--bg:#f5f7fb;--c:#fff;--t:#151821;--m:#747b8d;--l:#e6e9f1;--a:#5657df;--s:#eff0ff;--g:#18875a;--r:#c54848;--y:#a96e0b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font-family:Inter,system-ui,-apple-system,Segoe UI,Arial}
+.app{max-width:980px;margin:auto;padding:20px 16px 90px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px}.logo{font-size:24px;font-weight:900}.badge{font-size:12px;background:var(--s);color:var(--a);padding:8px 11px;border-radius:99px;font-weight:750}
+h1{font-size:30px;margin:0 0 7px;letter-spacing:-.8px}.sub{color:var(--m);margin:0 0 20px}.card{background:var(--c);border:1px solid var(--l);border-radius:20px;padding:18px;box-shadow:0 10px 30px #2221}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.big{min-height:145px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer}.big b{font-size:18px}.muted{color:var(--m);font-size:13px}.ico{font-size:26px}
+button{font:inherit;cursor:pointer}.btn{border:0;border-radius:13px;padding:12px 15px;font-weight:800}.primary{background:var(--a);color:#fff}.soft{background:#f0f1f5}.red{background:#fff0f0;color:var(--r)}.back{border:0;background:none;color:var(--a);font-weight:800;padding:6px 0 18px}
+.view{display:none}.view.on{display:block}.drop{border:2px dashed #d7dbe7;border-radius:17px;padding:30px;text-align:center;background:#fbfcff}.drop input{display:block;margin:15px auto 0;max-width:100%}
+.preview{max-width:100%;max-height:420px;border-radius:14px;margin-top:15px}.bar{height:9px;background:#eceef4;border-radius:10px;overflow:hidden;margin:14px 0}.bar i{height:100%;display:block;background:var(--a);width:0}.status{font-size:13px;color:var(--m)}
+.controls{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}input,select{font:inherit;border:1px solid var(--l);border-radius:11px;padding:10px 11px;background:white;outline:none}
+input:focus{border-color:var(--a)}.pairs{margin-top:18px}.pair{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid var(--l)}.pair input{width:100%}.x{border:0;border-radius:9px;padding:7px 10px}
+.titleRow{display:flex;justify-content:space-between;align-items:center;margin:28px 0 11px}.titleRow h2{font-size:19px;margin:0}
+.deck{display:flex;align-items:center;gap:13px;margin-bottom:10px}.grow{flex:1}.deck h3{margin:0 0 5px}.progress{height:7px;background:#eceef4;border-radius:10px;overflow:hidden;margin-top:10px}.progress i{display:block;height:100%;background:var(--a)}
+.study{max-width:680px;margin:auto}.flash{background:white;border:1px solid var(--l);border-radius:25px;min-height:350px;margin:18px 0;display:flex;justify-content:center;align-items:center;text-align:center;padding:38px;box-shadow:0 16px 45px #2221}.word{font-size:37px;font-weight:900}.ans{font-size:23px;color:var(--a);font-weight:750;margin-top:18px}
+.associmg{display:block;max-width:100%;width:auto;max-height:180px;object-fit:contain;border-radius:15px;margin:16px auto 0;background:#f2f3f7}
+.imgtools{display:grid;grid-template-columns:1fr auto;gap:7px;margin-top:7px}
+.iconbtn{width:34px;height:34px;border:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;padding:0;background:#f1f2f6;color:var(--m)}
+.iconbtn.danger{background:#fff0f0;color:var(--r)}
+.editImageRow{display:flex;align-items:center;gap:8px;margin-top:8px}.editImageRow .imgthumb{margin:0}
+.smallbtn{border:0;border-radius:10px;padding:8px 10px;font-weight:750;background:#f1f2f6;color:var(--t)}.imgthumb{width:74px;height:58px;object-fit:cover;border-radius:10px;border:1px solid var(--l)}
+.imgstatus{font-size:12px;color:var(--m);margin-top:8px}.aihint{font-size:12px;color:var(--m);margin-top:6px}.ratings{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.ratings button{border:0;border-radius:13px;padding:14px;font-weight:850}.no{background:#fff0f0;color:var(--r)}.hard{background:#fff7e7;color:var(--y)}.yes{background:#eaf8f1;color:var(--g)}
+.folderchip{border:1px solid var(--l);background:white;border-radius:999px;padding:9px 12px;font-weight:750}.folderchip.active{background:var(--a);color:white;border-color:var(--a)}.note{padding:12px 13px;border-radius:12px;background:#fff7e8;color:#73500f;font-size:13px;margin-top:12px}
+
+.modalbg{position:fixed;inset:0;background:#0006;display:none;align-items:flex-end;justify-content:center;z-index:50;padding:16px}
+.modalbg.on{display:flex}.modal{background:#fff;width:min(560px,100%);border-radius:22px;padding:18px;box-shadow:0 20px 60px #0003}
+.modal h3{margin:0 0 6px;font-size:20px}.modal .muted{margin-bottom:14px}.folderlist{display:grid;gap:8px}
+.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:14px 0}
+.statbox{border:1px solid var(--l);border-radius:14px;padding:13px 7px;text-align:center;cursor:pointer;transition:.15s;background:#fff}
+.statbox.good{background:#eaf8f1;color:var(--g)}.statbox.hard{background:#fff7e7;color:var(--y)}.statbox.bad{background:#fff0f0;color:var(--r)}
+.statbox.active{outline:3px solid currentColor;outline-offset:1px}.statbox:active{transform:scale(.98)}
+.statnum{font-size:24px;font-weight:900}.statlabel{font-size:12px;color:var(--m);margin-top:3px}
+.statlist{max-height:300px;overflow:auto;border-top:1px solid var(--l);margin-top:12px}
+.statrow{display:flex;justify-content:space-between;gap:12px;padding:10px 2px;border-bottom:1px solid var(--l);font-size:13px}
+.folderopt{width:100%;border:1px solid var(--l);background:#fff;border-radius:13px;padding:13px 14px;text-align:left;font-weight:800}
+.folderopt:hover,.folderopt:active{background:var(--s);border-color:var(--a)}
+.deckactions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;width:100%}
+.deckactions .btn{width:100%;min-width:0;padding:10px 4px;font-size:12px;line-height:1.15;white-space:normal;overflow-wrap:anywhere}
+.deckhead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.deckhead .grow{min-width:0}
+.studytop{flex:0 0 auto;background:var(--a);color:#fff;border:0;border-radius:14px;padding:12px 18px;font-weight:850;font-size:16px;box-shadow:0 6px 16px #5657df33}.movebtn{background:#eef0ff;color:var(--a);border:1px solid #d9dcff}
+
+@media(max-width:650px){.grid{grid-template-columns:1fr}.pair{grid-template-columns:1fr 1fr auto}.deck{align-items:flex-start;flex-wrap:wrap}.deck .grow{flex-basis:100%}.word{font-size:30px}}
+
+.pickgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.pickimg{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:14px;border:2px solid transparent;cursor:pointer;background:#f1f2f6}
+.pickimg:active{transform:scale(.98)}
+.zoomable{cursor:zoom-in}
+.imgviewer img{display:block;max-width:92vw;max-height:78vh;object-fit:contain;border-radius:16px;margin:auto}
+.imgviewer{width:min(94vw,760px);background:#111;padding:10px;border-radius:20px}
+
+.answerbox{margin-top:14px}
+.answerinput{width:100%;box-sizing:border-box;padding:14px 16px;border:1px solid var(--l);border-radius:14px;font-size:17px}
+.answerfeedback{margin-top:8px;font-size:14px;min-height:20px}
+.ocrwarn{border-color:#d99b00!important;background:#fff9e8!important}
+
+.pairlabels{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin:18px 0 0;padding:0 2px;color:var(--m);font-size:12px;font-weight:750}.pairlabels span:last-child{width:34px}
+.folderreview{display:flex;align-items:center;gap:10px;margin:0 0 14px;min-width:0}.folderreviewbtn{flex:0 0 auto}.folderreviewnote{color:var(--m);font-size:13px;line-height:1.3;min-width:0}
+.flash{padding:28px;min-height:390px}.studycardbody{width:100%;display:flex;align-items:stretch;justify-content:center;gap:22px}.studytext{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:center}.studyvisual{flex:0 0 44%;min-height:310px;align-items:center;justify-content:center;background:#f3f4f7;border-radius:22px;overflow:hidden}.flash.hasimage .studytext{align-items:flex-start;text-align:left;padding-left:8px}.associmg{width:100%;height:100%;max-height:330px;margin:0;object-fit:cover;border-radius:22px;background:#f3f4f7}.studyhint{margin-top:20px}
+@media(max-width:650px){.folderreview{align-items:flex-start;flex-wrap:wrap}.folderreviewnote{flex-basis:100%;padding-left:2px}.pairlabels{grid-template-columns:1fr 1fr 34px}.flash{padding:18px;min-height:360px}.studycardbody{gap:14px}.studyvisual{flex-basis:45%;min-height:280px}.flash.hasimage .word{font-size:28px}.flash.hasimage .ans{font-size:20px}.associmg{max-height:300px}}
+@media(max-width:390px){.flash.hasimage .studycardbody{gap:10px}.flash.hasimage .studyvisual{flex-basis:43%}.flash.hasimage .word{font-size:25px}}
+
+.manualcard{padding-top:14px}.manualtop{margin-top:0;margin-bottom:8px}.manualcard .pairlabels{margin-top:8px;margin-bottom:5px}.manualcard .pairs{margin-top:0}
+.manualcard .pair{margin-top:6px}
+.x:disabled{opacity:.28;cursor:default}
+@media(max-width:650px){.manualtop{gap:7px}.manualtop input{flex-basis:100%}.manualcard .pairlabels{margin-top:6px}}
+
+
+.flash{overflow:hidden}
+.studycardbody{min-width:0}
+.studytext{min-width:0;max-width:100%}
+.word,.ans{max-width:100%;overflow-wrap:anywhere;word-break:normal;hyphens:auto}
+.flash.hasimage .studycardbody{display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,44%);gap:18px;align-items:stretch}
+.flash.hasimage .studytext{min-width:0;width:auto;padding:0;align-items:flex-start;text-align:left}
+.flash.hasimage .studyvisual{display:flex!important;min-width:0;width:auto;min-height:300px}
+.flash.hasimage .associmg{width:100%;height:100%;max-height:360px;object-fit:cover}
+.flash.hasimage .word{font-size:clamp(27px,6.5vw,46px);line-height:1.06}
+.flash.hasimage .ans{font-size:clamp(19px,4.5vw,28px);line-height:1.16}
+@media(max-width:650px){
+ .flash.hasimage{padding:18px}
+ .flash.hasimage .studycardbody{grid-template-columns:minmax(0,1.08fr) minmax(118px,.92fr);gap:12px}
+ .flash.hasimage .studyvisual{min-height:260px}
+ .flash.hasimage .associmg{max-height:330px;border-radius:18px}
+ .flash.hasimage .word{font-size:clamp(24px,7vw,38px)}
+ .flash.hasimage .ans{font-size:clamp(18px,4.8vw,25px)}
+}
+@media(max-width:390px){
+ .flash.hasimage .studycardbody{grid-template-columns:minmax(0,1fr) minmax(105px,.78fr);gap:9px}
+ .flash.hasimage .word{font-size:clamp(22px,6.5vw,33px)}
+}
+
+.resumebar{margin:0 0 14px;padding:13px 14px;background:#fff;border:1px solid var(--l);border-radius:18px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.resumebar .muted{font-size:13px}
+.limitgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(max-width:520px){.limitgrid{grid-template-columns:repeat(2,1fr)}.resumebar{align-items:flex-start;flex-direction:column}}
+.answerfeedback.near{color:#9a6500}.answerfeedback.good{color:#16834b}.answerfeedback.bad{color:#b84b4b}
+
+.modeswitch{display:inline-flex;padding:3px;border:1px solid var(--l);border-radius:12px;background:#f4f5f7;gap:2px}
+.modeswitch button{border:0;background:transparent;border-radius:9px;padding:7px 10px;font:inherit;font-size:12px;font-weight:700;color:var(--m);cursor:pointer}
+.modeswitch button.active{background:#fff;color:var(--t);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+@media(max-width:430px){.modeswitch button{padding:6px 8px}.study .muted{gap:5px!important}}
+</style></head><body><div class="app">
+<header><div><div class="logo">Lexi Photo</div></div><button class="iconbtn" style="width:38px;height:38px" title="Налаштування" onclick="openSettings()">⚙</button></header>
+
+<section id="home" class="view on">
+<h1>Картки зі слів</h1>
+<div class="grid">
+<div class="card big" onclick="go('scan')"><div class="ico">▣</div><div><b>Фото → картки</b><div class="muted">Створи колоди зі скрінів або фото</div></div></div>
+<div class="card big" onclick="newManual()"><div class="ico">＋</div><div><b>Додати вручну</b><div class="muted">Створи власні картки</div></div></div>
+</div>
+<div class="titleRow"><h2>Папки</h2><button class="btn soft" onclick="newFolder()">+ Папка</button></div>
+<div id="folderChips" class="controls"></div>
+<div id="resumeBar" class="resumebar" style="display:none"></div><div class="titleRow"><h2 id="deckTitle">Мої колоди</h2><span class="muted" id="dc"></span></div><div id="folderReviewBar" class="folderreview" style="display:none"></div><div id="decks"></div>
+</section>
+
+<section id="scan" class="view">
+<button class="back" onclick="go('home')">← Назад</button><h1>Фото таблиці</h1>
+<p class="sub">Вибери скріншоти. Кожен стане окремою колодою.</p>
+<div class="card">
+<div class="drop">
+<b>Додай скріни або фото сторінок</b>
+<div class="muted" style="margin-top:6px">Можна вибрати одразу багато скрінів. 1 фото = 1 окрема колода.</div>
+<input id="file" type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.heic,.heif" multiple onchange="loadImages()">
+<div class="controls" style="justify-content:center"><button class="btn soft" onclick="document.getElementById('camera').click()">Зробити фото камерою</button></div>
+<input id="camera" type="file" accept="image/*" capture="environment" style="display:none" onchange="addCameraImage()">
+<div id="previews" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:14px"></div>
+</div>
+<div class="controls">
+<select id="lang"><option value="eng+ukr">English + українська</option><option value="ukr">Українська</option><option value="eng">English</option></select>
+<button class="btn primary" id="scanBtn" onclick="ocrAll()">Створити колоди зі скрінів</button>
+</div>
+<div class="bar"><i id="prog"></i></div><div id="stat" class="status">Фото ще не вибрані.</div>
+<div class="muted" style="margin-top:10px">1 фото = 1 колода</div>
+</div>
+</section>
+
+<section id="review" class="view">
+<button class="back" onclick="leaveReview()">← Назад</button><h1 id="reviewTitle">Перевір картки</h1><p id="reviewSub" class="sub">OCR іноді плутає символи. Кілька правильних відповідників можна записати через /, кому або ;</p>
+<div class="card manualcard">
+<div class="controls manualtop"><input id="name" placeholder="Назва колоди" style="flex:1"><button class="btn soft" onclick="addPair()">+ Картка</button><button class="btn primary" onclick="save()">Зберегти</button></div>
+<div class="pairlabels"><span>Слово</span><span>Значення / відповідник</span><span></span></div><div id="pairs" class="pairs"></div>
+</div>
+</section>
+
+<section id="edit" class="view">
+<button class="back" onclick="go('home')">← Назад</button>
+<h1>Редагування</h1>
+<div class="card">
+<label class="muted">Назва</label><input id="editName" style="width:100%;margin:6px 0 12px">
+<label class="muted">Папка</label><select id="editFolder" style="width:100%;margin:6px 0 12px"></select>
+<div class="controls"><button class="btn soft" onclick="editAddCard()">+ Картка</button><button class="btn soft" id="fillImagesBtn" onclick="fillEditImages(this)">+ Картинки</button><button class="btn primary" onclick="saveEdit()">Зберегти</button></div><div id="imageFillStatus" class="imgstatus"></div>
+<div id="editPairs" class="pairs"></div>
+</div></section>
+
+<section id="study" class="view"><div class="study">
+<button class="back" onclick="leaveStudy()">← Завершити</button>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px" class="muted"><span id="sn"></span><span style="display:flex;align-items:center;gap:8px"><span id="studyModeSwitch" class="modeswitch"><button id="cardsModeBtn" type="button" onclick="setStudyInputMode('cards')">Картки</button><button id="typeModeBtn" type="button" onclick="setStudyInputMode('type')">Ввід</button></span><span id="sp"></span></span></div>
+<div id="studyFlash" class="flash" onclick="reveal()"><div class="studycardbody"><div class="studytext"><div id="sf" class="word"></div><div id="sb" class="ans" style="display:none"></div><div id="hint" class="muted studyhint">Натисни на картку або Space</div></div><div id="studyVisual" class="studyvisual" style="display:none"><img id="studyImg" class="associmg" style="display:none"></div></div></div>
+<div id="typedAnswer" class="answerbox" style="display:none" onclick="event.stopPropagation()">
+<input id="typedInput" class="answerinput" autocomplete="off" autocapitalize="none" placeholder="Введи відповідь" onkeydown="if(event.key==='Enter')checkTypedAnswer()">
+<div id="typedFeedback" class="answerfeedback"></div>
+<div class="controls" style="margin-top:8px"><button class="btn soft" onclick="checkTypedAnswer()">Перевірити</button><button id="typedRevealBtn" class="btn soft" style="display:none" onclick="reveal()">Показати відповідь</button></div>
+</div>
+<div id="ratings" class="ratings" style="display:none"><button class="no" onclick="rate(0)">Не знаю</button><button class="hard" onclick="rate(1)">Важко</button><button class="yes" onclick="rate(2)">Знаю</button></div>
+</div></section>
+</div>
+<div id="reviewLimitModal" class="modalbg" onclick="if(event.target===this)closeReviewLimit()">
+ <div class="modal">
+  <h3 style="margin-top:0">Скільки слів повторити?</h3>
+  <div class="limitgrid">
+   <button class="btn soft" onclick="beginFolderReview(10)">10</button>
+   <button class="btn soft" onclick="beginFolderReview(20)">20</button>
+   <button class="btn soft" onclick="beginFolderReview(30)">30</button>
+   <button class="btn primary" onclick="beginFolderReview(0)">Усі</button>
+  </div>
+  <p class="muted" style="margin-bottom:0">При обмеженні спочатку потрапляють слова, які потребують повторення найбільше. «Усі» перемішуються без такого сортування.</p>
+ </div>
+</div>
+<div id="imagePickerModal" class="modalbg" onclick="if(event.target===this)closeImagePicker()">
+ <div class="modal" style="max-width:620px">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+   <div><h3 style="margin:0">Вибери картинку</h3><div id="pickerWord" class="muted"></div></div>
+   <button class="iconbtn" onclick="closeImagePicker()">×</button>
+  </div>
+  <div id="pickerStatus" class="muted" style="margin-top:10px"></div>
+  <div id="pickerGrid" class="pickgrid"></div>
+  <div class="controls">
+   <button class="btn soft" onclick="loadMoreCandidates()">Ще варіанти</button>
+   <button class="btn soft" onclick="pickLocalImage()">З галереї</button>
+   <input id="localImageInput" type="file" accept="image/*" style="display:none" onchange="useLocalImage(this)">
+  </div>
+ </div>
+</div>
+<div id="imageViewerModal" class="modalbg" onclick="closeImageViewer()">
+ <div class="imgviewer"><img id="imageViewerImg" alt=""></div>
+</div>
+<div id="settingsModal" class="modalbg" onclick="if(event.target===this)closeSettings()">
+ <div class="modal">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+   <h3 style="margin:0">Налаштування</h3>
+   <button class="iconbtn" onclick="closeSettings()">×</button>
+  </div>
+
+  <div style="padding:14px 0;border-bottom:1px solid var(--l)">
+   <b>Картинки</b>
+   <div class="muted" style="margin-top:4px">OpenRouter використовується лише для підбору асоціацій.</div>
+   <div class="controls" style="align-items:center">
+    <input id="orKey" type="password" placeholder="OpenRouter API key" style="flex:1;min-width:190px">
+    <button class="btn soft" onclick="saveOpenRouterKey()">Зберегти</button>
+   </div>
+   <div id="orStatus" class="muted"></div>
+  </div>
+
+  <div style="padding-top:14px">
+   <b>Резервна копія</b>
+   <div class="muted" style="margin-top:4px">Дані зберігаються у цьому браузері. Експорт переносить їх на інший пристрій.</div>
+   <div class="controls">
+    <button class="btn soft" onclick="exportBackup()">Експорт</button>
+    <button class="btn soft" onclick="document.getElementById('backupInput').click()">Імпорт</button>
+    <input id="backupInput" type="file" accept=".json,application/json" style="display:none" onchange="importBackup(this)">
+   </div>
+  </div>
+ </div>
+</div>
+<div id="folderDeleteModal" class="modalbg" onclick="if(event.target===this)closeFolderDelete()">
+ <div class="modal">
+  <h3>Видалити папку?</h3>
+  <div id="folderDeleteName" class="muted"></div>
+  <div class="muted">Колоди не видаляться — вони перейдуть у «Без папки».</div>
+  <div class="controls" style="margin-top:16px">
+   <button class="btn soft" onclick="closeFolderDelete()">Скасувати</button>
+   <button class="btn red" onclick="confirmFolderDelete()">Видалити</button>
+  </div>
+ </div>
+</div>
+<div id="progressModal" class="modalbg" onclick="if(event.target===this)closeProgress()">
+ <div class="modal">
+  <h3 id="progressTitle">Прогрес</h3>
+  <div class="muted">Статус показує останній рівень знання кожної картки.</div>
+  <div class="statgrid">
+   <div id="goodBox" class="statbox good" onclick="filterProgress('good')"><div id="goodN" class="statnum">0</div><div class="statlabel">Добре знаю</div></div>
+   <div id="hardBox" class="statbox hard" onclick="filterProgress('hard')"><div id="hardN" class="statnum">0</div><div class="statlabel">Знаю так собі</div></div>
+   <div id="badBox" class="statbox bad" onclick="filterProgress('bad')"><div id="badN" class="statnum">0</div><div class="statlabel">Не знаю</div></div>
+  </div>
+  <div id="filterHint" class="muted" style="text-align:center">Натисни категорію, щоб побачити тільки ці слова.</div>
+  <div id="progressList" class="statlist" style="display:none"></div>
+  <div class="controls"><button class="btn soft" onclick="closeProgress()">Закрити</button></div>
+ </div>
+</div>
+<div id="deleteModal" class="modalbg" onclick="if(event.target===this)closeDelete()">
+  <div class="modal">
+    <h3>Видалити колоду?</h3>
+    <div id="deleteDeckName" class="muted"></div>
+    <div class="note" style="background:#fff0f0;color:#8f3030">Буде видалено колоду, усі її картки та прогрес навчання.</div>
+    <div class="controls" style="margin-top:16px">
+      <button class="btn soft" onclick="closeDelete()">Скасувати</button>
+      <button class="btn red" onclick="confirmDelete()">Видалити</button>
+    </div>
+  </div>
+</div>
+<div id="moveModal" class="modalbg" onclick="if(event.target===this)closeMove()">
+  <div class="modal">
+    <h3>Перемістити колоду</h3>
+    <div id="moveDeckName" class="muted"></div>
+    <div id="moveFolders" class="folderlist"></div>
+    <div class="controls"><button class="btn soft" onclick="closeMove()">Скасувати</button></div>
+  </div>
+</div>
+<script>
+let ds=JSON.parse(localStorage.getItem('lexiphoto')||'[]'), pairs=[], cur=null, q=[], qi=0, rev=false;
+ds=ds.map(d=>({...d,folder:d.folder||'Без папки',cards:(d.cards||[]).map(c=>({...c,uid:c.uid||('c_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2))}))}));
+let folders=JSON.parse(localStorage.getItem('lexifolders')||'["Без папки","Іншомовні слова","Фразеологізми","Лексичні помилки"]');
+const $=id=>document.getElementById(id);
+function ensureCardIds(){
+ ds.forEach(d=>d.cards.forEach(c=>{if(!c._cid)c._cid='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,9)}));
+}
+ensureCardIds();
+function go(x){document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));$(x).classList.add('on');if(x==='home')render()}
+let selectedFiles=[];
+function renderPreviews(){
+ let box=$('previews'); box.innerHTML='';
+ selectedFiles.forEach((f,i)=>{
+   let d=document.createElement('div'); d.style.position='relative';
+   let im=document.createElement('img'); im.src=URL.createObjectURL(f); im.className='preview'; im.style='width:100%;height:150px;object-fit:cover;margin:0';
+   let b=document.createElement('button'); b.textContent='×'; b.className='x'; b.style='position:absolute;right:5px;top:5px;background:white';
+   b.onclick=()=>{selectedFiles.splice(i,1);renderPreviews();updateFileStatus()};
+   d.append(im,b); box.appendChild(d);
+ })
+}
+function updateFileStatus(){
+ $('stat').textContent=selectedFiles.length?`Вибрано сторінок: ${selectedFiles.length}. Натисни «Створити колоди зі скрінів».`:'Фото ще не вибрані.';
+}
+function loadImages(){
+ selectedFiles=Array.from($('file').files||[]);
+ renderPreviews(); updateFileStatus();
+}
+function addCameraImage(){
+ let f=$('camera').files[0]; if(f){selectedFiles.push(f);renderPreviews();updateFileStatus()}
+}
+async function ocrAll(){
+ if(!selectedFiles.length)return alert('Спочатку вибери скріни або фото.');
+ $('scanBtn').disabled=true; $('prog').style.width='0%';
+ let created=[], failed=[];
+ try{
+   // Continue numbering after existing automatically numbered decks.
+   let nums=ds.map(d=>{let m=(d.name||'').match(/^Колода\s+(\d+)$/i);return m?Number(m[1]):0});
+   let next=Math.max(0,...nums)+1;
+   for(let i=0;i<selectedFiles.length;i++){
+     let page=i+1;
+     $('stat').textContent=`Фото ${page} з ${selectedFiles.length}: розпізнавання...`;
+     try{
+       let r=await Tesseract.recognize(selectedFiles[i],$('lang').value,{logger:m=>{
+         if(m.progress!=null){
+           let overall=(i+m.progress)/selectedFiles.length;
+           $('prog').style.width=Math.round(overall*100)+'%';
+           $('stat').textContent=`Фото ${page} з ${selectedFiles.length}: ${Math.round(m.progress*100)}%`;
+         }
+       }});
+       let found=parseOCR(r.data);
+       if(!found.length) found=parseText(r.data.text);
+       let seen=new Set();
+       found=found.filter(p=>{
+         p.f=clean(p.f);p.b=clean(p.b);
+         if(!p.f||!p.b)return false;
+         let k=(p.f+'|||'+p.b).toLowerCase();
+         if(seen.has(k))return false;seen.add(k);return true
+       });
+       if(found.length){
+         let deck={id:Date.now()+i,name:`Колода ${next++}`,folder:'Без папки',
+           cards:found.map(x=>({uid:'c_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2),f:x.f,b:x.b,score:0,image:''}))};
+         ds.push(deck); created.push(deck);
+       } else failed.push(page);
+     }catch(err){failed.push(page)}
+   }
+   localStorage.setItem('lexiphoto',JSON.stringify(ds));
+   $('prog').style.width='100%';
+   selectedFiles=[];$('file').value='';renderPreviews();
+   let msg=`Створено окремих колод: ${created.length}.`;
+   if(failed.length)msg+=` Не вдалося розпізнати фото: ${failed.join(', ')}.`;
+   $('stat').textContent=msg;
+   alert(msg);
+   go('home');
+ }catch(e){
+   $('stat').textContent='Помилка OCR: '+e.message;
+ }finally{$('scanBtn').disabled=false}
+}
+function parseOCR(data){
+ let words=(data.words||[]).filter(w=>w.text&&w.text.trim()&&w.confidence>20);
+ if(!words.length)return[];
+ let hs=words.map(w=>w.bbox.y1-w.bbox.y0).filter(x=>x>0).sort((a,b)=>a-b), med=hs[Math.floor(hs.length/2)]||18, tol=Math.max(10,med*.75);
+ words.sort((a,b)=>a.bbox.y0-b.bbox.y0||a.bbox.x0-b.bbox.x0);
+ let rows=[];
+ for(let w of words){let cy=(w.bbox.y0+w.bbox.y1)/2,r=rows.find(x=>Math.abs(x.y-cy)<tol);if(!r){r={y:cy,ws:[]};rows.push(r)}r.ws.push(w);r.y=(r.y*(r.ws.length-1)+cy)/r.ws.length}
+ let all=words.map(w=>w.bbox.x0), min=Math.min(...all), max=Math.max(...words.map(w=>w.bbox.x1)), mid=(min+max)/2;
+ let out=[];
+ for(let r of rows){r.ws.sort((a,b)=>a.bbox.x0-b.bbox.x0);let gaps=[];for(let i=0;i<r.ws.length-1;i++)gaps.push({i,g:r.ws[i+1].bbox.x0-r.ws[i].bbox.x1});
+ let cut=gaps.sort((a,b)=>b.g-a.g)[0], left=[],right=[];
+ if(cut&&cut.g>med*.9){left=r.ws.slice(0,cut.i+1);right=r.ws.slice(cut.i+1)}
+ else {left=r.ws.filter(w=>(w.bbox.x0+w.bbox.x1)/2<mid);right=r.ws.filter(w=>(w.bbox.x0+w.bbox.x1)/2>=mid)}
+ let a=clean(left.map(w=>w.text).join(' ')),b=clean(right.map(w=>w.text).join(' '));if(a&&b)out.push({f:a,b:b})}
+ return out;
+}
+function parseText(t){return t.split(/\n+/).map(clean).filter(Boolean).map(line=>{let z=line.split(/\s{2,}|\t+|[—–|]/);return z.length>=2?{f:clean(z[0]),b:clean(z.slice(1).join(' '))}:null}).filter(Boolean)}
+function clean(s){return (s||'').replace(/\s+/g,' ').replace(/^[|:;,\-]+|[|:;,\-]+$/g,'').trim()}
+function suspiciousOCR(s){s=String(s||'').trim();return !s||/[0-9]/.test(s)||/[|{}\[\]<>_=+]/.test(s)||/\s{2,}/.test(s)}
+function renderPairs(){
+ if(!pairs.length)pairs=[{f:'',b:''}];
+ $('pairs').innerHTML=pairs.map((p,i)=>`<div class="pair"><input class="${suspiciousOCR(p.f)?'ocrwarn':''}" title="${suspiciousOCR(p.f)?'Перевір: OCR міг помилитися':''}" value="${esc(p.f)}" oninput="pairs[${i}].f=this.value"><input class="${suspiciousOCR(p.b)?'ocrwarn':''}" title="${suspiciousOCR(p.b)?'Перевір: OCR міг помилитися':''}" value="${esc(p.b)}" oninput="pairs[${i}].b=this.value"><button class="x" ${pairs.length===1?'disabled title="Має залишитися хоча б одна картка"':''} onclick="if(pairs.length>1){pairs.splice(${i},1);renderPairs()}">×</button></div>`).join('')
+}
+function addPair(){pairs.push({f:'',b:''});renderPairs();let ins=document.querySelectorAll('#pairs input');if(ins.length)ins[ins.length-2].focus()}
+let reviewOrigin='scan';
+function newManual(){
+ reviewOrigin='home';pairs=[{f:'',b:''}];$('name').value='Нова колода';
+ $('reviewTitle').textContent='Нова колода';
+ $('reviewSub').textContent='Додай слово та його значення або відповідник.';
+ renderPairs();go('review')
+}
+function leaveReview(){go(reviewOrigin==='home'?'home':'scan')}
+function duplicateWords(cards){
+ let existing=new Map();
+ ds.forEach(d=>d.cards.forEach(c=>existing.set(normAnswer(c.f),d.name)));
+ let hits=[];
+ cards.forEach(c=>{let k=normAnswer(c.f);if(existing.has(k))hits.push(`${c.f} — уже є в «${existing.get(k)}»`)});
+ return hits;
+}
+function save(){
+ let n=$('name').value.trim(), cards=pairs.filter(x=>x.f.trim()&&x.b.trim()).map(x=>({f:x.f.trim(),b:x.b.trim(),score:0,image:x.image||'',_cid:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,9)}));
+ if(!n||!cards.length)return alert('Потрібні назва і хоча б одна заповнена картка.');
+ let dup=duplicateWords(cards);
+ if(dup.length&&!confirm(`Знайдено дублікати:\n\n${dup.slice(0,8).join('\n')}${dup.length>8?`\n…і ще ${dup.length-8}`:''}\n\nВсе одно зберегти?`))return;
+ ds.push({id:Date.now(),name:n,cards});saveAll();go('home')
+}
+let activeFolder='Усі';
+function saveAll(){localStorage.setItem('lexiphoto',JSON.stringify(ds));localStorage.setItem('lexifolders',JSON.stringify(folders))}
+let deletingFolder=null;
+function askDeleteFolder(name){
+ if(name==='Без папки')return;
+ deletingFolder=name;$('folderDeleteName').textContent=name;$('folderDeleteModal').classList.add('on');
+}
+function closeFolderDelete(){$('folderDeleteModal').classList.remove('on');deletingFolder=null}
+function confirmFolderDelete(){
+ if(!deletingFolder)return;
+ ds.forEach(d=>{if((d.folder||'Без папки')===deletingFolder)d.folder='Без папки'});
+ folders=folders.filter(f=>f!==deletingFolder);
+ if(activeFolder===deletingFolder)activeFolder='Усі';
+ saveAll();closeFolderDelete();render();
+}
+function newFolder(){let n=prompt('Назва папки:');if(!n)return;n=n.trim();if(n&&!folders.includes(n)){folders.push(n);saveAll();activeFolder=n;render()}}
+function chooseFolder(n){activeFolder=n;render()}
+let movingDeckId=null;
+function moveDeck(id){
+ let d=ds.find(x=>x.id===id); if(!d)return;
+ movingDeckId=id;
+ $('moveDeckName').textContent=d.name;
+ $('moveFolders').innerHTML=folders.map(f=>`<button class="folderopt" onclick="confirmMove('${encodeURIComponent(f)}')">${esc(f)}${d.folder===f?' ✓':''}</button>`).join('');
+ $('moveModal').classList.add('on');
+}
+function confirmMove(encoded){
+ let f=decodeURIComponent(encoded), d=ds.find(x=>x.id===movingDeckId);
+ if(d&&folders.includes(f)){d.folder=f;saveAll();closeMove();render()}
+}
+function closeMove(){$('moveModal').classList.remove('on');movingDeckId=null}
+function render(){
+ let rs=getSavedSession(),rb=$('resumeBar');
+ if(rb){
+   if(rs&&rs.q&&rs.q.length&&rs.qi<rs.q.length){
+     rb.style.display='flex';rb.innerHTML=`<div><b>Незавершене тренування</b><div class="muted">${esc(rs.name||'Сесія')} · ${Math.min((rs.qi||0)+1,rs.q.length)}/${rs.q.length}</div></div><button class="btn primary" onclick="resumeStudy()">Продовжити</button>`;
+   }else{rb.style.display='none';rb.innerHTML=''}
+ }
+
+ $('folderChips').innerHTML=['Усі',...folders].map(f=>{
+ let removable=f!=='Усі'&&f!=='Без папки';
+ return `<span style="display:inline-flex;align-items:center;gap:3px"><button class="folderchip ${activeFolder===f?'active':''}" onclick="chooseFolder(decodeURIComponent('${encodeURIComponent(f)}'))">${esc(f)}</button>${removable?`<button class="iconbtn danger" style="width:27px;height:27px;font-size:14px" title="Видалити папку" onclick="askDeleteFolder(decodeURIComponent('${encodeURIComponent(f)}'))">×</button>`:''}</span>`
+}).join('');
+ let shown=activeFolder==='Усі'?ds:ds.filter(d=>(d.folder||'Без папки')===activeFolder);
+ $('deckTitle').textContent=activeFolder==='Усі'?'Мої колоди':activeFolder;
+ $('dc').textContent=shown.length?shown.length+' кол.':'';
+ let fr=$('folderReviewBar');
+ if(fr){
+   if(activeFolder!=='Усі'&&activeFolder!=='Без папки'){
+     let doneDecks=shown.filter(d=>d.cards.some(c=>c.seen));
+     let reviewN=doneDecks.reduce((n,d)=>n+d.cards.filter(c=>c.seen&&(cardLevel(c)!=='good'||isGoodDue(c))).length,0);
+     fr.style.display='block';
+     fr.innerHTML=`<button class="btn soft folderreviewbtn" onclick="startFolderReview()">Повторити папку${reviewN?' · '+reviewN:''}</button><span class="folderreviewnote">Слова, які варто повторити зараз</span>`;
+   }else{fr.style.display='none';fr.innerHTML=''}
+ }
+ $('decks').innerHTML=shown.length?shown.map(d=>{let l=d.cards.filter(c=>c.seen).length,p=Math.round(l/d.cards.length*100);return `<div class="card deck" style="display:block"><div class="deckhead"><div class="grow"><h3>${esc(d.name)}</h3><div class="muted">${d.cards.length} карток • пройдено ${l}/${d.cards.length} • ${esc(d.folder||'Без папки')}</div></div><button type="button" class="studytop" onclick="start(${d.id})">${l?'Повторити':'Вчити'}</button></div><div class="progress"><i style="width:${p}%"></i></div><div class="deckactions" style="margin-top:14px"><button type="button" class="btn soft" onclick="showProgress(${d.id})">Прогрес</button><button type="button" class="btn soft" onclick="editDeck(${d.id})">Редагувати</button><button type="button" class="btn movebtn" onclick="moveDeck(${d.id})">Папка</button><button type="button" class="btn red" onclick="askDelete(${d.id})">Видалити</button></div></div>`}).join(''):'<div class="card muted" style="text-align:center;padding:30px">Тут поки немає колод.</div>'
+}
+let deletingDeckId=null;
+function askDelete(id){
+ let d=ds.find(x=>x.id===id); if(!d)return;
+ deletingDeckId=id;$('deleteDeckName').textContent=d.name;$('deleteModal').classList.add('on');
+}
+function closeDelete(){$('deleteModal').classList.remove('on');deletingDeckId=null}
+function confirmDelete(){
+ if(deletingDeckId==null)return;
+ ds=ds.filter(x=>x.id!==deletingDeckId);saveAll();closeDelete();render();
+}
+let editingDeckId=null, editCards=[];
+function editDeck(id){
+ let d=ds.find(x=>x.id===id);if(!d)return;
+ editingDeckId=id;editCards=d.cards.map(c=>{let x={...c};ensureUid(x);return x});
+ $('editName').value=d.name;
+ $('editFolder').innerHTML=folders.map(f=>`<option value="${esc(f)}" ${f===d.folder?'selected':''}>${esc(f)}</option>`).join('');
+ renderEditCards();go('edit');
+}
+function renderEditCards(){
+ $('editPairs').innerHTML=editCards.map((c,i)=>`<div style="padding:12px 0;border-bottom:1px solid var(--l)">
+ <div class="pair" style="border:0;padding:0"><input value="${esc(c.f)}" oninput="editCards[${i}].f=this.value"><input value="${esc(c.b)}" oninput="editCards[${i}].b=this.value"><button class="iconbtn danger" title="Видалити картку" onclick="editCards.splice(${i},1);renderEditCards()">×</button></div>
+ <div class="editImageRow">
+   ${c.image?`<img class="imgthumb zoomable" id="editimg_${i}" onclick="showImageViewer(${i})" title="Збільшити" onerror="this.style.display='none'">`:`<span class="muted">Без картинки</span>`}
+   <button class="iconbtn" title="Вибрати іншу картинку" onclick="findOneEditImage(${i})">↻</button>
+   ${c.image?`<button class="iconbtn danger" title="Видалити картинку" onclick="deleteEditImage(${i})">×</button>`:''}
+ </div>
+ </div>`).join('');
+ editCards.forEach(async(c,i)=>{if(c.image){try{let u=await resolveCardImage(c),el=$('editimg_'+i);if(el)el.src=u}catch(e){}}});
+}
+function editAddCard(){editCards.push({uid:'c_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2),f:'',b:'',score:0,image:''});renderEditCards()}
+function saveEdit(){
+ let d=ds.find(x=>x.id===editingDeckId);if(!d)return;
+ let n=$('editName').value.trim();let cards=editCards.filter(c=>c.f.trim()&&c.b.trim());
+ if(!n)return alert('Вкажи назву колоди.'); if(!cards.length)return alert('У колоді має бути хоча б одна картка.');
+ d.name=n;d.folder=$('editFolder').value;d.cards=cards;saveAll();editingDeckId=null;go('home');
+}
+
+
+const IMG_DB='lexi_ai_images_v1', IMG_STORE='images';
+
+function openSettings(){
+ $('settingsModal').classList.add('on');
+ let k=localStorage.getItem('lexi_openrouter_key')||'';
+ $('orKey').value=k;
+ $('orStatus').textContent=k?'Ключ збережено на цьому пристрої':'Ключ не додано';
+}
+function closeSettings(){$('settingsModal').classList.remove('on')}
+function saveOpenRouterKey(){
+ let k=($('orKey').value||'').trim();
+ if(k)localStorage.setItem('lexi_openrouter_key',k);else localStorage.removeItem('lexi_openrouter_key');
+ $('orStatus').textContent=k?'Ключ збережено на цьому пристрої':'Ключ видалено';
+}
+function getOpenRouterKey(){
+ let k=(localStorage.getItem('lexi_openrouter_key')||'').trim();
+ if(!k)throw new Error('NO_API_KEY');
+ return k;
+}
+async function openRouterJSON(prompt){
+ let key=getOpenRouterKey();
+ let r=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+  method:'POST',
+  headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},
+  body:JSON.stringify({
+   model:'openrouter/free',
+   messages:[{role:'user',content:prompt}],
+   temperature:.65,
+   max_tokens:220
+  })
+ });
+ if(!r.ok)throw new Error(r.status===401?'BAD_API_KEY':'AI_ERROR');
+ let d=await r.json(),t=d?.choices?.[0]?.message?.content||'';
+ t=String(t).replace(/```json|```/g,'').trim();
+ let a=t.indexOf('{'),b=t.lastIndexOf('}');
+ if(a>=0&&b>a)t=t.slice(a,b+1);
+ return JSON.parse(t);
+}
+async function exportBackup(){
+ let images={};
+ try{
+   let db=await imgDB();
+   images=await new Promise((resolve,reject)=>{
+     let tx=db.transaction(IMG_STORE,'readonly'), store=tx.objectStore(IMG_STORE), r=store.openCursor(), out={};
+     r.onsuccess=()=>{let c=r.result;if(c){out[c.key]=c.value;c.continue()}else resolve(out)};
+     r.onerror=()=>reject(r.error);
+   });
+ }catch(e){}
+ let payload={app:'Lexi Photo',version:15,exportedAt:new Date().toISOString(),decks:ds,folders,images};
+ let blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+ let a=document.createElement('a');a.href=URL.createObjectURL(blob);
+ a.download='lexi-backup-'+new Date().toISOString().slice(0,10)+'.json';
+ document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+async function importBackup(input){
+ let f=input.files&&input.files[0];if(!f)return;
+ try{
+   let data=JSON.parse(await f.text());
+   if(!data||!Array.isArray(data.decks))throw new Error('bad backup');
+   ds=data.decks.map(d=>({...d,folder:d.folder||'Без папки',cards:(d.cards||[]).map(c=>({...c,uid:c.uid||('c_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2))}))}));
+   folders=Array.isArray(data.folders)&&data.folders.length?data.folders:['Без папки'];
+   if(!folders.includes('Без папки'))folders.unshift('Без папки');
+   if(data.images){
+     for(let [k,v] of Object.entries(data.images)){try{await putImg(k,v)}catch(e){}}
+   }
+   activeFolder='Усі';saveAll();closeSettings();render();
+ }catch(e){alert('Це не резервна копія Lexi.')}
+ finally{input.value=''}
+}
+function imgDB(){
+ return new Promise((resolve,reject)=>{
+  let r=indexedDB.open(IMG_DB,1);
+  r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(IMG_STORE))r.result.createObjectStore(IMG_STORE)};
+  r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);
+ });
+}
+async function putImg(key,val){
+ let db=await imgDB();return new Promise((resolve,reject)=>{
+  let tx=db.transaction(IMG_STORE,'readwrite');tx.objectStore(IMG_STORE).put(val,key);
+  tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);
+ });
+}
+async function getImg(key){
+ let db=await imgDB();return new Promise((resolve,reject)=>{
+  let r=db.transaction(IMG_STORE,'readonly').objectStore(IMG_STORE).get(key);
+  r.onsuccess=()=>resolve(r.result||'');r.onerror=()=>reject(r.error);
+ });
+}
+async function delImg(key){
+ let db=await imgDB();return new Promise((resolve,reject)=>{
+  let tx=db.transaction(IMG_STORE,'readwrite');tx.objectStore(IMG_STORE).delete(key);
+  tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);
+ });
+}
+function ensureUid(c){if(!c.uid)c.uid='c_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2);return c.uid}
+async function resolveCardImage(c){
+ if(!c||!c.image)return '';
+ if(c.image.startsWith('idb:'))return await getImg(c.image.slice(4));
+ return c.image;
+}
+
+
+
+async function deckAssociationIdeas(cards){
+ let compact=cards.map((c,i)=>({i,word:(c.f||'').trim(),meaning:(c.b||'').trim()}));
+ let j=await openRouterJSON(
+`You are the mnemonic visual planner for a teen-safe vocabulary-learning app.
+For EACH card, build the COMPLETE association chain before searching.
+
+Goal: the final image should feel like a clean frame from a family-friendly animated film or live-action film, and should make the Ukrainian MEANING easy to recall.
+
+For every card reason through these fields:
+1. meaning_core: the simplest literal concept of the answer.
+2. memory_hook: a concrete visual idea that represents that concept.
+3. scene: one vivid, instantly readable situation containing the hook.
+4. bridge: one short explanation of why seeing that scene should recall the meaning and therefore the word.
+5. visual_anchors: 2-4 concrete visible things/actions that MUST be present.
+6. avoid: things that would create the wrong association.
+7. search_queries: exactly 2 concise English searches describing the SAME scene, not two unrelated ideas.
+
+STRICT VISUAL RULES:
+- Search for a SCENE, not an isolated object and not a dictionary illustration.
+- Prefer meme-like visual situations first: exaggerated reaction, visual joke, absurd contrast, obvious before/after situation, expressive character or animal. If a meme-like association is weak, use cinematic/animation-like composition with clear action and emotion.
+- A meme means the VISUAL LOGIC of a meme; do not depend on written captions to understand it.
+- Do NOT request or depend on a specific copyrighted movie, TV show, cartoon, franchise, celebrity, copyrighted character, or specific famous meme template.
+- No written text, captions, subtitles, signs, logos, watermarks, charts, maps or diagrams.
+- No sexual content, nudity, drugs, alcohol, smoking, weapons, gore, graphic injury, hate symbols, racist stereotypes, degrading depictions, extremist imagery, or other unsafe/offensive material.
+- Do not use race, ethnicity, religion, disability, gender, nationality or other protected traits as the mnemonic mechanism.
+- People, when present, should be portrayed neutrally and respectfully.
+- The scene must still make sense with no written words visible.
+
+Cards: ${JSON.stringify(compact)}
+
+Return ONLY JSON:
+{"items":[{"i":0,"meaning_core":"...","memory_hook":"...","scene":"...","bridge":"...","visual_anchors":["..."],"avoid":["..."],"search_queries":["...","..."]}]}
+Include every index exactly once.`
+ );
+ let map={};
+ (j.items||[]).forEach(x=>{
+   if(!Number.isInteger(x.i))return;
+   map[x.i]={
+     meaning_core:String(x.meaning_core||''),
+     memory_hook:String(x.memory_hook||''),
+     scene:String(x.scene||''),
+     bridge:String(x.bridge||''),
+     visual_anchors:Array.isArray(x.visual_anchors)?x.visual_anchors.slice(0,4).map(String):[],
+     avoid:Array.isArray(x.avoid)?x.avoid.slice(0,5).map(String):[],
+     search_queries:Array.isArray(x.search_queries)?x.search_queries.slice(0,2).map(String):[]
+   };
+ });
+ return map;
+}
+
+async function associationPlan(c,offset=0){
+ let j=await openRouterJSON(
+`Build ONE complete teen-safe visual mnemonic plan for:
+Word: "${(c.f||'').trim()}"
+Meaning: "${(c.b||'').trim()}"
+
+The desired result is preferably a strong visual meme: funny, exaggerated, instantly readable and memorable without any caption. If that is not suitable, use a clean cinematic scene that feels like a frame from family-friendly animation or film. Do NOT name or require a copyrighted movie, meme template, franchise, celebrity, or copyrighted character.
+
+Return the full chain:
+meaning_core -> memory_hook -> scene -> bridge -> visual_anchors -> avoid -> search_queries.
+
+The image must be understandable without text. Meme-like humor, exaggerated reactions and absurd visual situations are encouraged when they strengthen the association.
+Never rely on written text/captions/logos/watermarks. Never use sexual content, drugs/alcohol/smoking, weapons, gore, hate/extremist imagery, racist stereotypes, degrading depictions, or protected personal traits as the mnemonic.
+Variation: ${offset}.
+
+Return ONLY JSON:
+{"meaning_core":"...","memory_hook":"...","scene":"...","bridge":"...","visual_anchors":["..."],"avoid":["..."],"search_queries":["query 1","query 2"]}`
+ );
+ return {
+  meaning_core:String(j.meaning_core||''),memory_hook:String(j.memory_hook||''),scene:String(j.scene||''),
+  bridge:String(j.bridge||''),visual_anchors:Array.isArray(j.visual_anchors)?j.visual_anchors.slice(0,4).map(String):[],
+  avoid:Array.isArray(j.avoid)?j.avoid.slice(0,5).map(String):[],
+  search_queries:Array.isArray(j.search_queries)?j.search_queries.slice(0,2).map(String):[]
+ };
+}
+async function associationIdeas(c,offset=0){
+ let p=await associationPlan(c,offset);
+ return p.search_queries.length?p.search_queries:[p.scene,p.memory_hook].filter(Boolean);
+}
+async function openverseCandidates(query,pageSize=12){
+ if(!query)return [];
+ let url='https://api.openverse.org/v1/images/?q='+encodeURIComponent(query)
+   +'&page_size='+Math.min(20,pageSize)
+   +'&mature=false';
+ let r=await fetch(url,{headers:{'Accept':'application/json'}});
+ if(!r.ok)throw new Error('OPENVERSE_'+r.status);
+ let j=await r.json();
+ return (j.results||[]).map(x=>({
+   id:x.id||x.url||x.thumbnail,
+   url:x.thumbnail||x.url||'',
+   full:x.url||x.thumbnail||'',
+   title:x.title||'',
+   description:(x.description||(x.meta_data&&x.meta_data.description)||''),
+   tags:(x.tags||[]).slice(0,10).map(t=>typeof t==='string'?t:(t.name||'')).filter(Boolean),
+   creator:x.creator||'',
+   source:x.source||x.provider||'',
+   license:x.license||'',
+   width:x.width||0,height:x.height||0
+ })).filter(x=>x.url);
+}
+function basicImageScore(x,i){
+ let t=(x.title+' '+(x.description||'')+' '+x.tags.join(' ')).toLowerCase(),score=60-i;
+ // Hard visual-quality/safety proxies before AI ranking.
+ if(/logo|flag|map|diagram|chart|screenshot|document|infographic|typography|lettering|caption|subtitle|watermark|poster text|signage|coat of arms/i.test(t))score-=80;
+ if(/meme|reaction|funny|humor|comedy|comic|expression|surprised|confused|excited|awkward/i.test(t))score+=10;
+ if(/weapon|gun|rifle|pistol|knife|sword|blood|gore|corpse|nude|nudity|sex|porn|cigarette|smoking|alcohol|beer|wine|vodka|drug|cannabis|marijuana|hate|nazi|swastika|extremist/i.test(t))score-=100;
+ if(/animation|animated|cinematic|film still|movie scene|scene|story|character|people|person|family|animal|nature|street|architecture|illustration|drawing|painting|meme|reaction|funny|humor|comic/i.test(t))score+=9;
+ if(x.width&&x.height){
+   let ratio=x.width/x.height;
+   // Film-like horizontal/near-horizontal framing is preferred.
+   if(ratio>=1.15&&ratio<=2.05)score+=8;
+   else if(ratio>.65&&ratio<2.4)score+=2;
+   else score-=8;
+ }
+ return score;
+}
+function dedupeImages(arr){
+ return [...new Map(arr.filter(x=>x&&x.url).map(x=>[x.id||x.url,x])).values()];
+}
+async function searchMnemonicImages(queries,limit=10){
+ let qs=[...new Set((queries||[]).filter(Boolean))].slice(0,5);
+ let groups=await Promise.all(qs.map(q=>openverseCandidates(q,10).catch(()=>[])));
+ let all=dedupeImages(groups.flat());
+ return all.map((x,i)=>({...x,score:basicImageScore(x,i)})).sort((a,b)=>b.score-a.score).slice(0,limit);
+}
+async function aiPickBestImage(card,candidates,plan=null){
+ if(!candidates.length)return null;
+ let compact=candidates.slice(0,10).map((x,i)=>({
+   i,title:x.title,description:String(x.description||'').slice(0,240),tags:x.tags
+ }));
+ try{
+  if(!plan)plan=await associationPlan(card,0);
+  let j=await openRouterJSON(
+`Select the best image metadata candidate for this COMPLETE mnemonic plan.
+
+Vocabulary:
+word="${card.f||''}"
+meaning="${card.b||''}"
+
+Association chain:
+meaning_core="${plan.meaning_core||''}"
+memory_hook="${plan.memory_hook||''}"
+scene="${plan.scene||''}"
+bridge="${plan.bridge||''}"
+visual_anchors=${JSON.stringify(plan.visual_anchors||[])}
+avoid=${JSON.stringify(plan.avoid||[])}
+
+Candidates=${JSON.stringify(compact)}
+
+Ranking priorities, in order:
+1. Candidate metadata clearly supports the planned SCENE and visual anchors.
+2. It supports the memory bridge to the meaning.
+3. Prefer a meme-like visual joke/reaction/absurd situation when it makes the association immediate; otherwise prefer a cinematic/animated scene rather than an isolated object.
+4. The association must work WITHOUT reading text. Reject caption-dependent memes, subtitles, signs, logos, watermarks and diagrams. A text-free meme-like image is valid and often preferable.
+5. Reject any candidate suggesting sexual content, drugs/alcohol/smoking, weapons, gore, hate/extremist imagery, racist/degrading stereotypes, or protected traits used as the mnemonic.
+6. If no candidate is semantically strong, return -1 rather than choosing a random image.
+
+Return ONLY JSON: {"i":0,"confidence":0.0}. i must be -1 or a candidate index.`
+  );
+  if(Number.isInteger(j.i)&&j.i>=0&&candidates[j.i]&&Number(j.confidence||0)>=0.45)return candidates[j.i];
+  if(j.i===-1)return null;
+ }catch(e){}
+ return candidates[0]||null;
+}
+async function fastImageFromPlan(plan,card){
+ let qs=(plan&&plan.search_queries||[]).filter(Boolean);
+ if(!qs.length)qs=[plan?.scene,plan?.memory_hook,card?.b].filter(Boolean).slice(0,2);
+ let candidates=await searchMnemonicImages(qs,10);
+ if(!candidates.length)return '';
+ let best=await aiPickBestImage(card,candidates,plan);
+ return best?.url||'';
+}
+async function fastImageFromQuery(query,fallback='',card=null){
+ let plan={scene:query,memory_hook:fallback,bridge:'',visual_anchors:[],avoid:[],search_queries:[query,fallback].filter(Boolean)};
+ let candidates=await searchMnemonicImages(plan.search_queries,10);
+ if(!candidates.length)return '';
+ let best=card?await aiPickBestImage(card,candidates,plan):candidates[0];
+ return best?.url||'';
+}
+async function candidateImages(c,offset=0,limit=3){
+ let plan=null;
+ try{plan=await associationPlan(c,offset)}catch(e){}
+ let ideas=plan?.search_queries?.length?plan.search_queries:[(c.b||c.f||'').trim()];
+ let candidates=await searchMnemonicImages(ideas,12);
+ if(!candidates.length)return [];
+ // For manual replacement we want diversity, not three near-identical search results.
+ let chosen=[],usedTitles=new Set();
+ for(let x of candidates){
+   let key=(x.title||'').toLowerCase().replace(/\W+/g,' ').trim().slice(0,35);
+   if(key&&usedTitles.has(key))continue;
+   usedTitles.add(key);chosen.push(x);
+   if(chosen.length>=limit)break;
+ }
+ return chosen.map(x=>({url:x.url,full:x.full,score:x.score,title:x.title,source:x.source,license:x.license}));
+}
+async function setWebAssociation(c){
+ let plan=null;
+ try{plan=await associationPlan(c,0)}catch(e){}
+ let ideas=plan?.search_queries?.length?plan.search_queries:[(c.b||c.f||'').trim()];
+ let candidates=await searchMnemonicImages(ideas,10);
+ let best=await aiPickBestImage(c,candidates,plan);
+ if(!best)throw new Error('NO_MATCH');
+ c.image=best.url;c.imageSource='openverse';c.imageHint=best.title||'';
+ return best.url;
+}
+// Legacy names kept as wrappers so older UI code cannot accidentally break.
+async function commonsCandidates(query){return await openverseCandidates(query,12)}
+async function commonsImage(card){return await setWebAssociation(card)}
+async function commonsAssociation(c){let url=await setWebAssociation(c);return {url,label:c.imageHint||''}}
+
+async function deleteEditImage(i){
+ if(!editCards[i])return;
+ let c=editCards[i], uid=ensureUid(c);
+ if(c.image&&c.image.startsWith('idb:')){try{await delImg(uid)}catch(e){}}
+ c.image='';c.imageSource='';c.imageHint='';renderEditCards();
+}
+let pickerIndex=-1,pickerOffset=0,pickerBusy=false;
+async function findOneEditImage(i){openImagePicker(i)}
+async function openImagePicker(i){
+ pickerIndex=i;pickerOffset=0;
+ let c=editCards[i];if(!c)return;
+ $('pickerWord').textContent=(c.f||'')+' — '+(c.b||'');
+ $('pickerGrid').innerHTML='';$('pickerStatus').textContent='Підготовка…';
+ $('imagePickerModal').classList.add('on');
+ try{getOpenRouterKey();await loadCandidateBatch(false)}
+ catch(e){$('pickerStatus').textContent=e.message==='NO_API_KEY'?'Додай OpenRouter API key у ⚙':'Не вдалося завантажити варіанти'}
+}
+function closeImagePicker(){$('imagePickerModal').classList.remove('on');pickerBusy=false}
+async function loadCandidateBatch(append){
+ if(pickerBusy||pickerIndex<0)return;pickerBusy=true;
+ $('pickerStatus').textContent='Шукаю варіанти…';
+ try{
+  let arr=await candidateImages(editCards[pickerIndex],pickerOffset++,3);
+  if(!append)$('pickerGrid').innerHTML='';
+  let base=$('pickerGrid').children.length;
+  arr.forEach((x,j)=>{
+   let im=document.createElement('img');im.className='pickimg';im.src=x.url;im.alt=x.title;
+   im.onclick=()=>chooseCandidate(x.url);$('pickerGrid').appendChild(im);
+  });
+  $('pickerStatus').textContent=arr.length?'Натисни на найкращу':'Варіантів не знайдено';
+ }catch(e){$('pickerStatus').textContent='Не вдалося знайти картинки'}
+ finally{pickerBusy=false}
+}
+async function loadMoreCandidates(){await loadCandidateBatch(true)}
+function chooseCandidate(url){
+ if(pickerIndex<0)return;let c=editCards[pickerIndex];c.image=url;c.imageSource='web';c.imageHint='';
+ closeImagePicker();renderEditCards();
+}
+function pickLocalImage(){$('localImageInput').click()}
+async function useLocalImage(input){
+ let f=input.files&&input.files[0];if(!f||pickerIndex<0)return;
+ let reader=new FileReader();
+ reader.onload=async()=>{
+  let c=editCards[pickerIndex];ensureUid(c);
+  try{await putImg(c.uid,reader.result);c.image='idb:'+c.uid;c.imageSource='local';c.imageHint='';closeImagePicker();renderEditCards()}catch(e){}
+  input.value='';
+ };
+ reader.readAsDataURL(f);
+}
+let bulkImagesRunning=false,bulkImagesStop=false;
+async function fillEditImages(btn){
+ if(bulkImagesRunning){bulkImagesStop=true;return}
+ try{getOpenRouterKey()}catch(e){$('imageFillStatus').textContent='Додай OpenRouter API key у ⚙';return}
+ let missing=editCards.map((c,i)=>({c,i})).filter(x=>!x.c.image);
+ if(!missing.length){$('imageFillStatus').textContent='Усі картинки вже додані';return}
+ bulkImagesRunning=true;bulkImagesStop=false;
+ if(btn){btn.textContent='Зупинити';btn.classList.add('red')}
+ let added=0,failed=0;
+ try{
+  $('imageFillStatus').textContent='Підбираю асоціації…';
+  // One AI request for the whole deck instead of one request per card.
+  let queryMap={};
+  try{queryMap=await deckAssociationIdeas(missing.map(x=>x.c))}catch(e){
+   if(e.message==='BAD_API_KEY'){$('imageFillStatus').textContent='Невірний API key';return}
+   // Continue with the card meanings as fallback searches instead of failing the whole operation.
+   queryMap={};
+  }
+  // Search images in small parallel batches to be much faster without hammering Commons.
+  const batchSize=5;
+  for(let s=0;s<missing.length;s+=batchSize){
+   if(bulkImagesStop)break;
+   let batch=missing.slice(s,s+batchSize);
+   let results=await Promise.all(batch.map(async(x,k)=>{
+    let global=s+k,plan=queryMap[global]||{};
+    if(!plan.search_queries||!plan.search_queries.length)plan={meaning_core:x.c.b||'',memory_hook:x.c.b||'',scene:x.c.b||'',bridge:'',visual_anchors:[],avoid:[],search_queries:[(x.c.b||x.c.f||'').trim()]};
+    try{return await fastImageFromPlan(plan,x.c)}catch(e){return ''}
+   }));
+   results.forEach((url,k)=>{
+    let x=batch[k];
+    if(url){x.c.image=url;x.c.imageSource='web';added++}else failed++;
+   });
+   renderEditCards();
+   $('imageFillStatus').textContent=`${Math.min(s+batch.length,missing.length)} / ${missing.length} · додано ${added}`;
+  }
+  $('imageFillStatus').textContent=bulkImagesStop?`Зупинено · додано ${added}`:(added?`Готово · ${added}/${missing.length}`:'Зображень не знайдено');
+ }finally{
+  bulkImagesRunning=false;bulkImagesStop=false;
+  if(btn){btn.textContent='+ Картинки';btn.classList.remove('red')}
+ }
+}
+async function showImageViewer(i){
+ let c=editCards[i];if(!c||!c.image)return;
+ try{let u=await resolveCardImage(c);if(!u)return;$('imageViewerImg').src=u;$('imageViewerModal').classList.add('on')}catch(e){}
+}
+function closeImageViewer(){$('imageViewerModal').classList.remove('on');$('imageViewerImg').src=''}
+function cardLevel(c){
+ if(!c.seen)return 'new';
+ if(c.level===2)return 'good';
+ if(c.level===1)return 'hard';
+ return 'bad';
+}
+function shuffle(a){
+ a=[...a];
+ for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}
+ return a;
+}
+let studyInputMode=localStorage.getItem('lexi_study_input_mode')||'cards';
+function setStudyInputMode(mode){
+ studyInputMode=mode==='type'?'type':'cards';
+ localStorage.setItem('lexi_study_input_mode',studyInputMode);
+ updateModeButton();
+ // During first exposure there is deliberately nothing to type yet.
+ if(q[qi]&&!q[qi].intro)load();
+}
+function toggleStudyInputMode(){setStudyInputMode(studyInputMode==='cards'?'type':'cards')}
+function updateModeButton(){
+ let a=$('cardsModeBtn'),b=$('typeModeBtn');
+ if(a)a.classList.toggle('active',studyInputMode==='cards');
+ if(b)b.classList.toggle('active',studyInputMode==='type');
+}
+function normAnswer(s){return String(s||'').toLowerCase().replace(/[’ʼ`]/g,"'").replace(/[.,;:!?()"«»]/g,' ').replace(/\s+/g,' ').trim()}
+function splitAnswers(s){return String(s||'').split(/\s*(?:;|\/|\||,\s*)\s*/).map(normAnswer).filter(Boolean)}
+function lev(a,b){let m=a.length,n=b.length,d=Array.from({length:m+1},()=>Array(n+1).fill(0));for(let i=0;i<=m;i++)d[i][0]=i;for(let j=0;j<=n;j++)d[0][j]=j;for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[m][n]}
+function tokenOverlap(a,b){
+ let A=new Set(normAnswer(a).split(' ').filter(Boolean)),B=new Set(normAnswer(b).split(' ').filter(Boolean));
+ if(!A.size||!B.size)return 0;let hit=[...A].filter(x=>B.has(x)).length;
+ return hit/Math.max(A.size,B.size);
+}
+function judgeTyped(user,correctField){
+ let u=normAnswer(user),ans=splitAnswers(correctField);if(!u)return {k:'empty',m:'Введи відповідь'};
+ let bestDist=999,bestRatio=0;
+ for(let a of ans){
+  if(u===a)return{k:'ok',m:'Правильно'};
+  let dist=lev(u,a),mx=Math.max(u.length,a.length),allow=mx>=12?2:(mx>=5?1:0);
+  if(dist<=allow)return{k:'typo',m:'Правильно — є невелика помилка в написанні'};
+  bestDist=Math.min(bestDist,dist);bestRatio=Math.max(bestRatio,tokenOverlap(u,a));
+ }
+ // Conservative "almost": close spelling or most words in a multi-word answer.
+ let longest=Math.max(u.length,...ans.map(a=>a.length));
+ if((longest>=6&&bestDist<=Math.max(2,Math.floor(longest*.22)))||bestRatio>=.6)
+   return{k:'near',m:'Майже правильно — звір із правильною відповіддю'};
+ return{k:'wrong',m:'Неправильно — звір із правильною відповіддю'};
+}
+function checkTypedAnswer(){
+ if(studyInputMode!=='type'||qi>=q.length)return;
+ let pr=q[qi],c=pr.card,r=judgeTyped($('typedInput').value,pr.reverse?c.f:c.b),fb=$('typedFeedback');
+ fb.textContent=r.m;fb.className='answerfeedback '+(r.k==='ok'||r.k==='typo'?'good':r.k==='near'?'near':'bad');
+ $('typedRevealBtn').style.display='inline-block';
+ if(r.k==='ok'||r.k==='typo')setTimeout(()=>{if(q[qi]===pr)rate(2)},450);
+ else if(r.k==='near'){pr._suggestedRating=1}
+}
+function dirState(c,reverse){
+ if(!c._dir)c._dir={f:{},r:{}};
+ return reverse?c._dir.r:c._dir.f;
+}
+function nextIntervalDays(c,reverse=false){
+ let s=dirState(c,reverse);return Math.max(1,Number(s.intervalDays)||Number(c.intervalDays)||1)
+}
+function updateInterval(c,r,reverse=false){
+ let s=dirState(c,reverse),old=nextIntervalDays(c,reverse);
+ if(r===2){s.streak=(s.streak||0)+1;let f=s.streak<=1?1.8:s.streak<=3?2.15:2.45;s.intervalDays=Math.min(120,Math.max(1,Math.round(old*f)))}
+ else if(r===1){s.streak=0;s.intervalDays=Math.max(1,Math.round(old*.55))}
+ else{s.streak=0;s.intervalDays=1}
+ s.level=r;s.lastSeen=Date.now();s.seen=true;
+}
+function directionDue(c,reverse=false){
+ let s=dirState(c,reverse);if(!s.seen)return c.seen;
+ return Date.now()-(s.lastSeen||0)>=nextIntervalDays(c,reverse)*86400000;
+}
+function isGoodDue(c){
+ if(!c.seen || cardLevel(c)!=='good')return false;
+ return directionDue(c,false)||directionDue(c,true);
+}
+function makePrompt(c,reverse=false){return {card:c,reverse:!!reverse}}
+function buildAdaptiveSession(cards,mode='deck'){
+ let eligible;
+ if(mode==='folder')eligible=cards.filter(c=>c.seen&&(cardLevel(c)!=='good'||isGoodDue(c)));
+ else if(mode==='review')eligible=cards.filter(c=>c.seen);
+ else eligible=cards;
+ if(mode==='deck'&&eligible.some(c=>!c.seen)){
+   // New deck: first show every new word as information, not as a test.
+   return shuffle(eligible).map(c=>makePrompt(c,false)).map(p=>{p.intro=!p.card.seen;return p});
+ }
+ return shuffle(eligible).map(c=>{
+   if(!c.seen)return makePrompt(c,false);
+   let fDue=directionDue(c,false),rDue=directionDue(c,true);
+   let reverse=fDue&&!rDue?false:(!fDue&&rDue?true:Math.random()<.5);
+   return makePrompt(c,reverse);
+ });
+}
+let studyMode='deck', studySourceCards=[];
+function start(id){
+ cur=ds.find(x=>x.id===id);if(!cur)return;
+ studyMode=cur.cards.some(c=>c.seen)?'review':'deck';
+ studySourceCards=cur.cards;q=buildAdaptiveSession(cur.cards,studyMode);
+ qi=0;$('sn').textContent=cur.name;go('study');load();saveStudySession()
+}
+let pendingFolderCards=[];
+function startFolderReview(){
+ if(activeFolder==='Усі'||activeFolder==='Без папки')return;
+ let decks=ds.filter(d=>(d.folder||'Без папки')===activeFolder&&d.cards.some(c=>c.seen));
+ pendingFolderCards=[];decks.forEach(d=>d.cards.forEach(c=>{if(c.seen&&(cardLevel(c)!=='good'||isGoodDue(c)))pendingFolderCards.push(c)}));
+ if(!pendingFolderCards.length){alert('На зараз у цій папці немає слів, які треба повторити.');return}
+ $('reviewLimitModal').classList.add('on');
+}
+function closeReviewLimit(){$('reviewLimitModal').classList.remove('on')}
+function reviewPriority(c){
+ let lvl=cardLevel(c)==='bad'?0:cardLevel(c)==='hard'?1:2;
+ let overdue=(Date.now()-(c.lastSeen||0))/86400000-nextIntervalDays(c,false);
+ return lvl*100-Math.max(0,overdue);
+}
+function beginFolderReview(limit){
+ closeReviewLimit();
+ let cards=[...pendingFolderCards];
+ if(limit){
+   cards.sort((a,b)=>reviewPriority(a)-reviewPriority(b));
+   cards=cards.slice(0,limit);
+ }else cards=shuffle(cards);
+ cur=null;studyMode='folder';studySourceCards=cards;q=buildAdaptiveSession(cards,'folder');qi=0;
+ $('sn').textContent='Повторення · '+activeFolder;go('study');load();saveStudySession();
+}
+function serializePrompt(p){return {cid:p.card._cid,reverse:!!p.reverse,intro:!!p.intro}}
+function saveStudySession(){
+ if(!q.length||qi>=q.length){localStorage.removeItem('lexi_active_session');return}
+ localStorage.setItem('lexi_active_session',JSON.stringify({
+   q:q.map(serializePrompt),qi,studyMode,deckId:cur?cur.id:null,folder:studyMode==='folder'?activeFolder:null,
+   name:$('sn')?$('sn').textContent:''
+ }));
+}
+function clearStudySession(){localStorage.removeItem('lexi_active_session')}
+function leaveStudy(){saveStudySession();go('home')}
+function getSavedSession(){try{return JSON.parse(localStorage.getItem('lexi_active_session')||'null')}catch(e){return null}}
+function resumeStudy(){
+ let s=getSavedSession();if(!s)return;
+ let byId=new Map();ds.forEach(d=>d.cards.forEach(c=>byId.set(c._cid,c)));
+ q=s.q.map(x=>{let c=byId.get(x.cid);if(!c)return null;let p=makePrompt(c,x.reverse);p.intro=!!x.intro;return p}).filter(Boolean);
+ if(!q.length){clearStudySession();render();return}
+ qi=Math.min(s.qi||0,q.length-1);studyMode=s.studyMode||'review';cur=s.deckId?ds.find(d=>d.id===s.deckId)||null:null;
+ studySourceCards=cur?cur.cards:q.map(p=>p.card);$('sn').textContent=s.name||'Продовження';go('study');load()
+}
+function scheduleRepeat(prompt,rating){
+ let c=prompt.card,remaining=q.length-(qi+1);
+ // Repeat weak answers later. Reverse direction is deliberately favored on
+ // repeats so knowing A→B does not masquerade as knowing B→A.
+ if(rating===0){
+   let near=Math.min(q.length,qi+2+Math.floor(Math.random()*Math.min(3,Math.max(1,remaining))));
+   q.splice(near,0,makePrompt(c,!prompt.reverse));
+   let later=Math.min(q.length,near+4+Math.floor(Math.random()*5));
+   q.splice(later,0,makePrompt(c,Math.random()<0.5));
+ }else if(rating===1){
+   let later=Math.min(q.length,qi+3+Math.floor(Math.random()*Math.max(2,Math.min(6,remaining+1))));
+   q.splice(later,0,makePrompt(c,!prompt.reverse));
+ }
+}
+function load(){
+ if(qi>=q.length){clearStudySession();saveAll();let a=studySourceCards||[],s=a.filter(c=>c.seen),g=s.filter(c=>cardLevel(c)==='good').length,h=s.filter(c=>cardLevel(c)==='hard').length,b=s.filter(c=>cardLevel(c)==='bad').length;alert(`Сесію завершено.\nЗнаю: ${g} · Важко: ${h} · Не знаю: ${b}`);go('home');return}
+ rev=false;let pr=q[qi],c=pr.card;
+ if(pr.intro){
+   $('sf').textContent=c.f;$('sb').textContent=c.b;$('sb').style.display='block';
+   $('studyImg').style.display='none';$('studyImg').src='';$('studyVisual').style.display='none';$('studyFlash').classList.remove('hasimage');
+   if(c.image){resolveCardImage(c).then(u=>{if(q[qi]===pr&&u){$('studyImg').src=u;$('studyImg').style.display='block';$('studyVisual').style.display='flex';$('studyFlash').classList.add('hasimage')}}).catch(()=>{})}
+   $('hint').style.display='none';$('typedAnswer').style.display='none';$('ratings').style.display='grid';
+   $('ratings').innerHTML='<button class="yes" style="grid-column:1/-1" onclick="finishIntro()">Далі</button>';
+   $('sp').textContent=(qi+1)+' / '+q.length;updateModeButton();saveStudySession();return;
+ }
+ $('ratings').innerHTML='<button class="no" onclick="rate(0)">Не знаю</button><button class="hard" onclick="rate(1)">Важко</button><button class="yes" onclick="rate(2)">Знаю</button>';
+
+ $('sf').textContent=pr.reverse?c.b:c.f;
+ $('sb').textContent=pr.reverse?c.f:c.b;
+ let ft=$('sf').textContent||'';
+ $('sf').style.fontSize=ft.length>28?'clamp(22px,5.8vw,34px)':ft.length>19?'clamp(25px,6.3vw,39px)':'';
+ $('sb').style.display='none';$('studyImg').style.display='none';$('studyImg').src='';$('studyVisual').style.display='none';$('studyFlash').classList.remove('hasimage');
+ if(c.image){resolveCardImage(c).then(u=>{if(q[qi]&&u){$('studyImg').src=u;$('studyVisual').style.display='flex';$('studyFlash').classList.add('hasimage')}}).catch(()=>{$('studyFlash').classList.remove('hasimage');$('studyVisual').style.display='none'})}
+ $('ratings').style.display='none';$('sp').textContent=(qi+1)+' / '+q.length;updateModeButton();
+ if(studyInputMode==='type'){$('hint').style.display='none';$('typedAnswer').style.display='block';$('typedInput').value='';$('typedFeedback').textContent='';$('typedRevealBtn').style.display='none';setTimeout(()=>$('typedInput').focus(),40)}
+ else{$('typedAnswer').style.display='none';$('hint').style.display='block'}
+}
+function finishIntro(){
+ let pr=q[qi],c=pr.card;
+ c.seen=true;
+ // Test this newly introduced word after several other cards.
+ let test=makePrompt(c,false),pos=Math.min(q.length,qi+3+Math.floor(Math.random()*4));
+ q.splice(pos,0,test);qi++;saveAll();saveStudySession();load();
+}
+function reveal(){
+ if(rev)return;rev=true;$('sb').style.display='block';
+ let c=q[qi].card;if(c.image){$('studyImg').style.display='block';$('studyVisual').style.display='flex';$('studyFlash').classList.add('hasimage')};
+ $('ratings').style.display='grid';$('hint').style.display='none';$('typedAnswer').style.display='none'
+}
+function rate(x){
+ let pr=q[qi],c=pr.card,prev=cardLevel(c);
+ c.seen=true;c.level=x;c.lastSeen=Date.now();c.reps=(c.reps||0)+1;c.score=x;updateInterval(c,x,pr.reverse);
+ if(x===2)c.goodReps=(c.goodReps||0)+1;else c.goodReps=0;
+ scheduleRepeat(pr,x);qi++;saveAll();saveStudySession();load()
+}
+let progressDeck=null, progressFilter=null;
+function showProgress(id){
+ let d=ds.find(x=>x.id===id);if(!d)return;progressDeck=d;progressFilter=null;
+ let good=d.cards.filter(c=>cardLevel(c)==='good'),hard=d.cards.filter(c=>cardLevel(c)==='hard'),
+ bad=d.cards.filter(c=>cardLevel(c)==='bad'||cardLevel(c)==='new');
+ $('progressTitle').textContent=d.name;
+ $('goodN').textContent=good.length;$('hardN').textContent=hard.length;$('badN').textContent=bad.length;
+ ['goodBox','hardBox','badBox'].forEach(x=>$(x).classList.remove('active'));
+ $('progressList').style.display='none';$('progressList').innerHTML='';
+ $('filterHint').style.display='block';
+ $('progressModal').classList.add('on');
+}
+function filterProgress(kind){
+ if(!progressDeck)return;progressFilter=kind;
+ ['goodBox','hardBox','badBox'].forEach(x=>$(x).classList.remove('active'));
+ $(kind+'Box').classList.add('active');
+ let cards=progressDeck.cards.filter(c=>{
+   let l=cardLevel(c);
+   return kind==='bad'?(l==='bad'||l==='new'):l===kind;
+ });
+ $('filterHint').style.display='none';$('progressList').style.display='block';
+ $('progressList').innerHTML=cards.length
+   ?cards.map(c=>`<div class="statrow"><span>${esc(c.f)}</span><span>${esc(c.b)}</span></div>`).join('')
+   :'<div class="muted" style="padding:16px;text-align:center">У цій категорії немає слів.</div>';
+}
+function closeProgress(){$('progressModal').classList.remove('on')}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+document.addEventListener('keydown',e=>{if($('study').classList.contains('on')&&e.code==='Space'){e.preventDefault();reveal()}});render();
+</script></body></html>
