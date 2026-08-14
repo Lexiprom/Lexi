@@ -963,13 +963,22 @@ function nextIntervalDays(c,reverse=false){
 }
 function updateInterval(c,r,reverse=false){
  let s=dirState(c,reverse),old=nextIntervalDays(c,reverse);
- if(r===2){s.streak=(s.streak||0)+1;let f=s.streak<=1?1.8:s.streak<=3?2.15:2.45;s.intervalDays=Math.min(120,Math.max(1,Math.round(old*f)))}
- else if(r===1){s.streak=0;s.intervalDays=Math.max(1,Math.round(old*.55))}
- else{s.streak=0;s.intervalDays=1}
+ if(r===2){
+   s.streak=(s.streak||0)+1;
+   let f=s.streak<=1?1.8:s.streak<=3?2.15:2.45;
+   s.intervalDays=Math.min(120,Math.max(1,Math.round(old*f)));
+   s.recoveryNeeded=false;
+ }else if(r===1){
+   s.streak=0;s.intervalDays=Math.max(1,Math.round(old*.55));s.recoveryNeeded=true;
+ }else{
+   s.streak=0;s.intervalDays=1;s.recoveryNeeded=true;
+ }
  s.level=r;s.lastSeen=Date.now();s.seen=true;
 }
 function directionDue(c,reverse=false){
- let s=dirState(c,reverse);if(!s.seen)return c.seen;
+ let s=dirState(c,reverse);
+ if(s.recoveryNeeded)return true;
+ if(!s.seen)return c.seen;
  return Date.now()-(s.lastSeen||0)>=nextIntervalDays(c,reverse)*86400000;
 }
 function isGoodDue(c){
@@ -1050,19 +1059,17 @@ function resumeStudy(){
  qi=Math.min(s.qi||0,q.length-1);studyMode=s.studyMode||'review';cur=s.deckId?ds.find(d=>d.id===s.deckId)||null:null;
  studySourceCards=cur?cur.cards:q.map(p=>p.card);$('sn').textContent=s.name||'Продовження';go('study');load()
 }
+function hasQueuedDirection(card,reverse,from=qi+1){
+ return q.slice(from).some(p=>p.card===card&&!!p.reverse===!!reverse&&!p.intro);
+}
 function scheduleRepeat(prompt,rating){
- let c=prompt.card,remaining=q.length-(qi+1);
- // Repeat weak answers later. Reverse direction is deliberately favored on
- // repeats so knowing A→B does not masquerade as knowing B→A.
- if(rating===0){
-   let near=Math.min(q.length,qi+2+Math.floor(Math.random()*Math.min(3,Math.max(1,remaining))));
-   q.splice(near,0,makePrompt(c,!prompt.reverse));
-   let later=Math.min(q.length,near+4+Math.floor(Math.random()*5));
-   q.splice(later,0,makePrompt(c,Math.random()<0.5));
- }else if(rating===1){
-   let later=Math.min(q.length,qi+3+Math.floor(Math.random()*Math.max(2,Math.min(6,remaining+1))));
-   q.splice(later,0,makePrompt(c,!prompt.reverse));
- }
+ if(rating===2)return;
+ // A failed direction must be recalled successfully in that SAME direction.
+ // Success in the opposite direction does not repair it.
+ if(hasQueuedDirection(prompt.card,prompt.reverse))return;
+ let delay=rating===0?(3+Math.floor(Math.random()*3)):(5+Math.floor(Math.random()*4));
+ let pos=Math.min(q.length,qi+delay);
+ q.splice(pos,0,makePrompt(prompt.card,prompt.reverse));
 }
 function load(){
  if(qi>=q.length){clearStudySession();saveAll();let a=studySourceCards||[],s=a.filter(c=>c.seen),g=s.filter(c=>cardLevel(c)==='good').length,h=s.filter(c=>cardLevel(c)==='hard').length,b=s.filter(c=>cardLevel(c)==='bad').length,n=a.filter(c=>!c.seen).length;alert(`Сесію завершено.\nЗнаю: ${g} · Важко: ${h} · Не знаю: ${b}${n?` · Не пройдено: ${n}`:''}`);go('home');return}
