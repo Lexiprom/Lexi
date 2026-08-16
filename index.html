@@ -1262,7 +1262,7 @@ const AI_BACKEND_KEY='lexi_ai_backend';
 function normalizeAIBackend(v){
  return String(v||'').trim().replace(/\/+$/,'');
 }
-const LEXI_SERVER_DEFAULT='https://lexi-ai.mrbiznesss52.workers.dev';
+const LEXI_SERVER_DEFAULT='https://lexi-server.mrbiznesss52.workers.dev';
 function getAIBackend(){let u=normalizeAIBackend(localStorage.getItem(AI_BACKEND_KEY)||LEXI_SERVER_DEFAULT);if(!u||u.includes('REPLACE-WITH-YOUR-WORKER'))throw new Error('NO_AI_BACKEND');return u;}
 function applyAIBackendFromLink(){
  try{
