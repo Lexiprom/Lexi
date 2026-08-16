@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Lexi</title>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js">
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+</script>
 
 <style>
 
@@ -684,9 +686,14 @@ h3{font-size:17px;letter-spacing:-.18px}
   .memoryTypeCard{min-height:64px}
 }
 
-</style></head><body><div class="app">
+
+.authGate{position:fixed;inset:0;z-index:10000;background:#f6f7fb;display:flex;align-items:center;justify-content:center;padding:22px}.authGate.hidden{display:none}.authCard{width:min(100%,430px);background:#fff;border:1px solid #e7e8ef;border-radius:28px;padding:28px;box-shadow:0 18px 60px rgba(28,31,45,.1)}.authBrand{font-size:38px;font-weight:800;letter-spacing:-1.5px;margin-bottom:6px}.authSub{color:#777b88;line-height:1.45;margin-bottom:22px}.authTabs{display:grid;grid-template-columns:1fr 1fr;background:#f0f1f6;border-radius:14px;padding:4px;margin-bottom:18px}.authTabs button{border:0;background:transparent;border-radius:11px;padding:11px;font-weight:700;font-size:15px}.authTabs button.on{background:#fff;box-shadow:0 2px 8px rgba(20,22,35,.08)}.authField{display:block;margin:12px 0}.authField span{display:block;font-weight:700;font-size:14px;margin-bottom:6px}.authField input{width:100%;box-sizing:border-box;border:1px solid #dddfe8;border-radius:14px;padding:14px 15px;font-size:16px}.authPrimary{width:100%;border:0;border-radius:14px;padding:14px;background:#5757e6;color:#fff;font-size:16px;font-weight:800}.authError{min-height:20px;color:#b64040;font-size:14px;margin-top:10px}.accountBox{padding:14px 0;border-top:1px solid var(--line);margin-top:14px}.accountEmail{font-weight:700;overflow-wrap:anywhere}.syncBadge{font-size:13px;color:var(--muted);margin-top:4px}
+.proChip{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:800;background:var(--card);cursor:pointer}.proChip.trial{border-style:dashed}
+</style><link rel="manifest" href="./manifest.webmanifest"><meta name="theme-color" content="#5757e6">
+</head><body><div class="app">
 <header><div><div class="logo">Lexi</div></div><button class="iconbtn" style="width:38px;height:38px" title="Налаштування" onclick="openSettings()">⚙</button></header>
 
+<div id="authGate" class="authGate"><div class="authCard"><div class="authBrand">Lexi</div><div class="authSub">Картки, прогрес і повторення синхронізуються між пристроями. Новий акаунт отримує 30 днів Lexi Pro.</div><div class="authTabs"><button id="authLoginTab" class="on" onclick="setAuthMode('login')">Увійти</button><button id="authRegisterTab" onclick="setAuthMode('register')">Реєстрація</button></div><form onsubmit="submitAuth(event)"><label id="authNameField" class="authField" style="display:none"><span>Ім’я</span><input id="authName" type="text" maxlength="60" autocomplete="name"></label><label class="authField"><span>Email</span><input id="authEmail" type="email" autocomplete="email" required></label><label class="authField"><span>Пароль</span><input id="authPassword" type="password" minlength="8" autocomplete="current-password" required></label><button id="authSubmit" class="authPrimary" type="submit">Увійти</button><div id="authError" class="authError"></div></form></div></div>
 <section id="home" class="view on">
 <div class="quickGrid">
   <button class="quickCard" type="button" onclick="go('scan')">
@@ -902,6 +909,7 @@ h3{font-size:17px;letter-spacing:-.18px}
  </div>
 </div>
 
+<div id="proModal" class="modal"><div class="modalCard" style="max-width:520px"><div class="modalHead"><div><b style="font-size:20px">Lexi Pro</b><div id="proModalSub" class="muted" style="margin-top:3px"></div></div><button class="iconBtn" onclick="closePro()">×</button></div><div style="padding:18px 0 6px;display:grid;gap:10px"><div class="card" style="padding:14px"><b>AI-асоціації</b><div class="muted">Текстові та візуальні мнемоніки прямо під час навчання.</div></div><div class="card" style="padding:14px"><b>Повний режим навчання</b><div class="muted">Усі режими навчання та повторення без обмежень.</div></div><div class="card" style="padding:14px"><b>Синхронізація</b><div class="muted">Картки й прогрес на всіх твоїх пристроях.</div></div></div><div id="proActionWrap" style="padding-top:10px"><button class="btn primary" style="width:100%" onclick="startProCheckout()">Отримати Lexi Pro</button></div><div id="proNote" class="muted" style="margin-top:10px;text-align:center">Оплата буде підключена перед публічним запуском.</div></div></div>
 <div id="settingsModal" class="modalbg" onclick="if(event.target===this)closeSettings()">
  <div class="modal">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
@@ -909,22 +917,9 @@ h3{font-size:17px;letter-spacing:-.18px}
    <button class="iconbtn" onclick="closeSettings()">×</button>
   </div>
 
-  <div style="padding:14px 0;border-bottom:1px solid var(--line)">
-   <b>AI-асоціації</b>
-   <div class="muted" style="margin-top:4px">Текст і картинки створює Cloudflare Workers AI. Окремі AI-ключі більше не потрібні.</div>
-   <label class="fieldLabel" for="aiBackend" style="margin-top:12px">Адреса Lexi AI Server</label>
-   <div class="controls" style="align-items:center;margin-top:6px">
-    <input id="aiBackend" type="url" placeholder="https://lexi-ai.mrbiznesss52.workers.dev" style="flex:1;min-width:190px">
-    <button class="btn soft" onclick="saveAIBackend()">Зберегти</button>
-   </div>
-   <div class="controls" style="margin-top:8px">
-    <button class="btn soft" onclick="testAIBackend()">Перевірити</button>
-    <button class="btn soft" onclick="copyAIShareLink()">Скопіювати посилання з AI</button>
-   </div>
-   <div id="aiStatus" class="muted" style="margin-top:7px"></div>
-  </div>
-
-  <div style="padding-top:14px">
+  <div style="padding:14px 0;border-bottom:1px solid var(--line)"><b>AI-асоціації</b><div class="muted" style="margin-top:4px">AI підключений до Lexi автоматично.</div><div id="aiStatus" class="muted" style="margin-top:7px"></div></div>
+<div class="accountBox"><b>Акаунт</b><div id="accountEmail" class="accountEmail" style="margin-top:7px">—</div><div id="planStatus" class="syncBadge" style="margin-top:5px">—</div><div id="syncStatus" class="syncBadge">—</div><div class="controls" style="margin-top:10px"><button class="btn soft" onclick="syncNow()">Синхронізувати</button><button class="btn soft" onclick="logoutLexi()">Вийти</button></div></div>
+<div style="padding-top:14px">
    <b>Резервна копія</b>
    <div class="muted" style="margin-top:4px">Дані зберігаються у цьому браузері. Експорт переносить їх на інший пристрій.</div>
    <div class="controls">
@@ -992,14 +987,11 @@ h3{font-size:17px;letter-spacing:-.18px}
   </div>
 </div>
 <script>
-let ds=JSON.parse(localStorage.getItem('lexiphoto')||'[]'), pairs=[], cur=null, q=[], qi=0, rev=false;
-ds=ds.map(d=>({...d,folder:d.folder||'Без папки',cards:(d.cards||[]).map(c=>({...c,uid:c.uid||('c_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2))}))}));
-let folders=JSON.parse(localStorage.getItem('lexifolders')||'["Без папки","Іншомовні слова","Фразеологізми","Лексичні помилки"]');
+const LEGACY_DECKS=JSON.parse(localStorage.getItem('lexiphoto')||'[]');const LEGACY_FOLDERS=JSON.parse(localStorage.getItem('lexifolders')||'[]');let ds=[],folders=[],pairs=[],cur=null,q=[],qi=0,rev=false,currentUser=null,authMode='login',syncTimer=null,syncBusy=false;
 const $=id=>document.getElementById(id);
 function ensureCardIds(){
  ds.forEach(d=>d.cards.forEach(c=>{if(!c._cid)c._cid='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,9)}));
 }
-ensureCardIds();
 function go(x){document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));$(x).classList.add('on');if(x==='home')render()}
 let selectedFiles=[];
 function renderPreviews(){
@@ -1116,7 +1108,13 @@ function save(){
  ds.push({id:Date.now(),name:n,cards});saveAll();go('home')
 }
 let activeFolder='Усі';
-function saveAll(){localStorage.setItem('lexiphoto',JSON.stringify(ds));localStorage.setItem('lexifolders',JSON.stringify(folders))}
+function userStorageKey(k){return currentUser?`lexi_${k}_${currentUser.id}`:`lexi_${k}_guest`}
+function persistLocalUserData(){if(!currentUser)return;localStorage.setItem(userStorageKey('decks'),JSON.stringify(ds));localStorage.setItem(userStorageKey('folders'),JSON.stringify(folders))}
+function saveAll(){if(!currentUser)return;persistLocalUserData();clearTimeout(syncTimer);syncTimer=setTimeout(()=>pushCloudState(false),700)}
+function setSyncStatus(t){let e=$('syncStatus');if(e)e.textContent=t||''}
+async function pushCloudState(show=true){if(!currentUser||syncBusy)return;syncBusy=true;if(show)setSyncStatus('Синхронізація…');try{await aiRequest('/api/state',{decks:ds,folders,studySession:getSavedSession()},45000);setSyncStatus('Синхронізовано')}catch(e){setSyncStatus('Збережено на пристрої. Сервер недоступний.')}finally{syncBusy=false}}
+async function pullCloudState(){let d=await aiRequest('/api/state',null,30000);if(!d.state)return false;ds=Array.isArray(d.state.decks)?d.state.decks:[];folders=Array.isArray(d.state.folders)?d.state.folders:[];if(d.state.studySession)localStorage.setItem('lexiStudySession',JSON.stringify(d.state.studySession));else localStorage.removeItem('lexiStudySession');ensureCardIds();persistLocalUserData();return true}
+async function syncNow(){await pushCloudState(true);try{await pullCloudState();render()}catch(e){}}
 let deletingFolder=null;
 function askDeleteFolder(name){
  if(name==='Без папки')return;
@@ -1242,16 +1240,30 @@ function saveEdit(){
 
 const IMG_DB='lexi_ai_images_v1', IMG_STORE='images';
 
+const AUTH_TOKEN_KEY='lexi_auth_token';
+function authToken(){return localStorage.getItem(AUTH_TOKEN_KEY)||''}
+function authHeaders(){let t=authToken();return t?{'Authorization':'Bearer '+t}:{}}
+function setAuthMode(m){authMode=m==='register'?'register':'login';$('authLoginTab').classList.toggle('on',authMode==='login');$('authRegisterTab').classList.toggle('on',authMode==='register');$('authSubmit').textContent=authMode==='login'?'Увійти':'Створити акаунт';$('authError').textContent='';if($('authNameField'))$('authNameField').style.display=authMode==='register'?'block':'none'}
+async function submitAuth(e){e.preventDefault();let err=$('authError'),btn=$('authSubmit');err.textContent='';btn.disabled=true;try{let d=await authRequest('/api/auth/'+authMode,{email:$('authEmail').value.trim(),password:$('authPassword').value,name:$('authName')?.value?.trim()||''});localStorage.setItem(AUTH_TOKEN_KEY,d.token);currentUser=d.user;await enterUser()}catch(x){let m=String(x.message||x);err.textContent=m==='EMAIL_EXISTS'?'Акаунт уже існує.':m==='INVALID_LOGIN'?'Неправильний email або пароль.':m==='WEAK_PASSWORD'?'Пароль — мінімум 8 символів.':'Не вдалося підключитися до Lexi Server.'}finally{btn.disabled=false}}
+async function authRequest(path,payload=null,timeout=30000){let base=getAIBackend(),c=new AbortController(),t=setTimeout(()=>c.abort(),timeout);try{let h={...authHeaders()};if(payload!==null)h['Content-Type']='application/json';let r=await fetch(base+path,{method:payload===null?'GET':'POST',headers:h,body:payload===null?undefined:JSON.stringify(payload),signal:c.signal});let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.error||('HTTP_'+r.status));return d}finally{clearTimeout(t)}}
+function planInfo(){const p=currentUser?.plan||'free',trial=currentUser?.trial_active===true,admin=currentUser?.role==='admin';return{p,trial,admin,pro:admin||p==='pro'||trial}}
+function updatePlanUI(){let x=planInfo(),label=x.admin?'Lexi Pro · Developer':x.p==='pro'?'Lexi Pro':x.trial?`Lexi Pro · пробний період${currentUser?.trial_days_left!=null?' · '+currentUser.trial_days_left+' дн.':''}`:'Lexi Free';if($('planStatus'))$('planStatus').textContent=label}
+function openPro(){let x=planInfo();$('proModal').classList.add('on');$('proModalSub').textContent=x.admin?'Developer-акаунт має Lexi Pro назавжди.':x.p==='pro'?'Lexi Pro активний.':x.trial?`Пробний Lexi Pro активний${currentUser?.trial_days_left!=null?' ще '+currentUser.trial_days_left+' дн.':''}.`:'Пробний період завершився.';$('proActionWrap').style.display=x.pro?'none':'block';$('proNote').textContent=x.admin?'Оплата для developer-акаунта не потрібна.':x.p==='pro'?'Підписка активна.':x.trial?'Після пробного періоду Pro-функції блокуються без підписки.':'Оплата буде підключена перед публічним запуском.'}
+function closePro(){$('proModal').classList.remove('on')}
+async function startProCheckout(){try{let d=await authRequest('/api/billing/checkout',{});if(d.url)location.href=d.url;else $('proNote').textContent='Оплата ще не підключена.'}catch(e){$('proNote').textContent='Оплата ще не підключена.'}}
+function requirePro(feature='Ця функція'){if(planInfo().pro)return true;openPro();$('proModalSub').textContent=feature+' доступна в Lexi Pro.';return false}
+
+async function enterUser(){$('authGate').classList.add('hidden');if($('accountEmail'))$('accountEmail').textContent=currentUser.email;updatePlanUI();let ld=JSON.parse(localStorage.getItem(userStorageKey('decks'))||'null'),lf=JSON.parse(localStorage.getItem(userStorageKey('folders'))||'null');try{let got=await pullCloudState();if(!got){let claimed=localStorage.getItem('lexi_legacy_claimed')==='1';if(!claimed&&LEGACY_DECKS.length){ds=LEGACY_DECKS;folders=LEGACY_FOLDERS;ensureCardIds();persistLocalUserData();await pushCloudState(false);localStorage.setItem('lexi_legacy_claimed','1')}else{ds=Array.isArray(ld)?ld:[];folders=Array.isArray(lf)?lf:[];ensureCardIds();if(ds.length||folders.length)await pushCloudState(false)}}}catch(e){ds=Array.isArray(ld)?ld:[];folders=Array.isArray(lf)?lf:[];ensureCardIds()}render()}
+async function restoreSession(){if(!authToken()){$('authGate').classList.remove('hidden');return}try{let d=await authRequest('/api/auth/me');currentUser=d.user;await enterUser()}catch(e){localStorage.removeItem(AUTH_TOKEN_KEY);$('authGate').classList.remove('hidden')}}
+async function logoutLexi(){try{await authRequest('/api/auth/logout',{})}catch{}localStorage.removeItem(AUTH_TOKEN_KEY);currentUser=null;ds=[];folders=[];closeSettings();$('authGate').classList.remove('hidden');setAuthMode('login');render()}
+
 const AI_BACKEND_KEY='lexi_ai_backend';
 
 function normalizeAIBackend(v){
  return String(v||'').trim().replace(/\/+$/,'');
 }
-function getAIBackend(){
- let u=normalizeAIBackend(localStorage.getItem(AI_BACKEND_KEY)||'');
- if(!u)throw new Error('NO_AI_BACKEND');
- return u;
-}
+const LEXI_SERVER_DEFAULT='https://REPLACE-WITH-YOUR-WORKER.workers.dev';
+function getAIBackend(){let u=normalizeAIBackend(localStorage.getItem(AI_BACKEND_KEY)||LEXI_SERVER_DEFAULT);if(!u||u.includes('REPLACE-WITH-YOUR-WORKER'))throw new Error('NO_AI_BACKEND');return u;}
 function applyAIBackendFromLink(){
  try{
   let u=new URL(location.href),v=normalizeAIBackend(u.searchParams.get('ai')||'');
@@ -1262,12 +1274,7 @@ function applyAIBackendFromLink(){
   }
  }catch(e){}
 }
-function openSettings(){
- $('settingsModal').classList.add('on');
- let u=normalizeAIBackend(localStorage.getItem(AI_BACKEND_KEY)||'');
- $('aiBackend').value=u;
- $('aiStatus').textContent=u?'AI-сервер збережено':'AI-сервер ще не підключений';
-}
+function openSettings(){$('settingsModal').classList.add('on');if($('accountEmail'))$('accountEmail').textContent=currentUser?.email||'';$('aiStatus').textContent='Lexi Server підключений';updatePlanUI();}
 function closeSettings(){$('settingsModal').classList.remove('on')}
 function saveAIBackend(){
  let u=normalizeAIBackend($('aiBackend').value);
@@ -1286,7 +1293,7 @@ async function aiRequest(path,payload=null,timeout=45000){
   let r=await fetch(base+path,{
    method:payload===null?'GET':'POST',
    signal:controller.signal,
-   headers:payload===null?{}:{'Content-Type':'application/json'},
+   headers:payload===null?{...authHeaders()}:{'Content-Type':'application/json',...authHeaders()},
    body:payload===null?undefined:JSON.stringify(payload)
   });
   let data=null;
@@ -1877,7 +1884,7 @@ function saveMemoryNote(){
  $('manualMemoryBtn').textContent=c.memoryNote?'Редагувати':'Написати самому';
  saveAll();
 }
-async function generateMemoryImage(e){
+async function generateMemoryImage(e){if(!requirePro('AI-картинки'))return;
  if(e)e.stopPropagation();
  let c=currentStudyCard();if(!c)return;
  let status=$('memoryImageStatus'),btn=e?.currentTarget;
@@ -1914,7 +1921,7 @@ async function uploadMemoryImage(input){
  }
  input.value='';
 }
-async function generateMemoryNote(e){
+async function generateMemoryNote(e){if(!requirePro('AI-асоціації'))return;
  if(e)e.stopPropagation();
  let c=currentStudyCard();if(!c)return;
  let d=$('memoryDisplay'),status=$('memoryStatus'),btn=e?.currentTarget;
@@ -2017,5 +2024,5 @@ function filterProgress(kind){
 }
 function closeProgress(){$('progressModal').classList.remove('on')}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
-document.addEventListener('keydown',e=>{if($('study').classList.contains('on')&&e.code==='Space'){e.preventDefault();reveal()}});applyAIBackendFromLink();render();
+document.addEventListener('keydown',e=>{if($('study').classList.contains('on')&&e.code==='Space'){e.preventDefault();reveal()}});applyAIBackendFromLink();render();restoreSession();
 </script></body></html>
