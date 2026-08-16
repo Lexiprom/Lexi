@@ -1049,7 +1049,7 @@ async function ocrAll(){
        } else failed.push(page);
      }catch(err){failed.push(page)}
    }
-   localStorage.setItem('lexiphoto',JSON.stringify(ds));
+   saveAll();
    $('prog').style.width='100%';
    selectedFiles=[];$('file').value='';renderPreviews();
    let msg=`Створено окремих колод: ${created.length}.`;
@@ -1109,12 +1109,103 @@ function save(){
 }
 let activeFolder='Усі';
 function userStorageKey(k){return currentUser?`lexi_${k}_${currentUser.id}`:`lexi_${k}_guest`}
+function syncMetaKey(){return currentUser?`lexi_sync_meta_${currentUser.id}`:'lexi_sync_meta_guest'}
+function readSyncMeta(){
+ let base={version:2,revision:0,dirty:false,localChangedAt:0,lastSyncAt:0,deletedDecks:{},folderUpdated:{},deletedFolders:{}};
+ if(!currentUser)return base;
+ try{let x=JSON.parse(localStorage.getItem(syncMetaKey())||'null');return x&&typeof x==='object'?{...base,...x,deletedDecks:{...base.deletedDecks,...(x.deletedDecks||{})},folderUpdated:{...base.folderUpdated,...(x.folderUpdated||{})},deletedFolders:{...base.deletedFolders,...(x.deletedFolders||{})}}:base}catch(e){return base}
+}
+function writeSyncMeta(m){if(currentUser)localStorage.setItem(syncMetaKey(),JSON.stringify(m))}
+function deckSyncId(d){return String(d?.id??'')}
+function deckComparable(d){let x={...(d||{})};delete x._syncUpdatedAt;return JSON.stringify(x)}
+function stateHasData(st){return !!(st&&(Array.isArray(st.decks)&&st.decks.length||Array.isArray(st.folders)&&st.folders.length||st.studySession))}
 function persistLocalUserData(){if(!currentUser)return;localStorage.setItem(userStorageKey('decks'),JSON.stringify(ds));localStorage.setItem(userStorageKey('folders'),JSON.stringify(folders))}
-function saveAll(){if(!currentUser)return;persistLocalUserData();clearTimeout(syncTimer);syncTimer=setTimeout(()=>pushCloudState(false),700)}
+function touchSyncMetadata(){
+ if(!currentUser)return;
+ let meta=readSyncMeta(),t=Date.now(),prevD=[],prevF=[];
+ try{prevD=JSON.parse(localStorage.getItem(userStorageKey('decks'))||'[]')}catch(e){}
+ try{prevF=JSON.parse(localStorage.getItem(userStorageKey('folders'))||'[]')}catch(e){}
+ let prevMap=new Map((Array.isArray(prevD)?prevD:[]).map(d=>[deckSyncId(d),d]));
+ let curIds=new Set();
+ ds.forEach(d=>{
+  let id=deckSyncId(d);curIds.add(id);let old=prevMap.get(id);
+  if(!old||deckComparable(d)!==deckComparable(old))d._syncUpdatedAt=t;
+  else if(!d._syncUpdatedAt)d._syncUpdatedAt=Number(old._syncUpdatedAt||meta.lastSyncAt||t);
+  if(meta.deletedDecks[id]&&Number(d._syncUpdatedAt||0)>Number(meta.deletedDecks[id]||0))delete meta.deletedDecks[id];
+ });
+ prevMap.forEach((d,id)=>{if(!curIds.has(id))meta.deletedDecks[id]=Math.max(Number(meta.deletedDecks[id]||0),t)});
+ let oldFolders=new Set(Array.isArray(prevF)?prevF:[]),newFolders=new Set(Array.isArray(folders)?folders:[]);
+ newFolders.forEach(f=>{if(!oldFolders.has(f)||!meta.folderUpdated[f])meta.folderUpdated[f]=t;if(Number(meta.folderUpdated[f]||0)>Number(meta.deletedFolders[f]||0))delete meta.deletedFolders[f]});
+ oldFolders.forEach(f=>{if(!newFolders.has(f))meta.deletedFolders[f]=Math.max(Number(meta.deletedFolders[f]||0),t)});
+ meta.version=2;meta.localChangedAt=t;meta.dirty=true;writeSyncMeta(meta);
+}
+function saveAll(){if(!currentUser)return;touchSyncMetadata();persistLocalUserData();clearTimeout(syncTimer);syncTimer=setTimeout(()=>pushCloudState(false),700)}
 function setSyncStatus(t){let e=$('syncStatus');if(e)e.textContent=t||''}
-async function pushCloudState(show=true){if(!currentUser||syncBusy)return;syncBusy=true;if(show)setSyncStatus('Синхронізація…');try{await aiRequest('/api/state',{decks:ds,folders,studySession:getSavedSession()},45000);setSyncStatus('Синхронізовано')}catch(e){setSyncStatus('Збережено на пристрої. Сервер недоступний.')}finally{syncBusy=false}}
-async function pullCloudState(){let d=await aiRequest('/api/state',null,30000);if(!d.state)return false;ds=Array.isArray(d.state.decks)?d.state.decks:[];folders=Array.isArray(d.state.folders)?d.state.folders:[];if(d.state.studySession)localStorage.setItem('lexiStudySession',JSON.stringify(d.state.studySession));else localStorage.removeItem('lexiStudySession');ensureCardIds();persistLocalUserData();return true}
-async function syncNow(){await pushCloudState(true);try{await pullCloudState();render()}catch(e){}}
+function stateSyncMeta(st,fallback=0){let x=st?._sync||{};return{updatedAt:Number(x.updatedAt||fallback||0),deletedDecks:{...(x.deletedDecks||{})},folderUpdated:{...(x.folderUpdated||{})},deletedFolders:{...(x.deletedFolders||{})}}}
+function buildLocalState(){
+ let m=readSyncMeta();
+ return{decks:ds,folders,studySession:getSavedSession(),_sync:{version:2,updatedAt:Number(m.localChangedAt||Date.now()),deletedDecks:{...(m.deletedDecks||{})},folderUpdated:{...(m.folderUpdated||{})},deletedFolders:{...(m.deletedFolders||{})}}};
+}
+function applyCloudState(st,revision,updatedAt,dirty=false){
+ st=st||{};ds=Array.isArray(st.decks)?st.decks:[];folders=Array.isArray(st.folders)?st.folders:[];
+ if(st.studySession)localStorage.setItem('lexi_active_session',JSON.stringify(st.studySession));else localStorage.removeItem('lexi_active_session');
+ ensureCardIds();persistLocalUserData();
+ let sm=stateSyncMeta(st,Date.parse(updatedAt||'')||0),m=readSyncMeta();
+ m.version=2;m.revision=Number(revision||0);m.dirty=!!dirty;m.localChangedAt=Number(sm.updatedAt||m.localChangedAt||0);m.lastSyncAt=Date.now();m.deletedDecks=sm.deletedDecks;m.folderUpdated=sm.folderUpdated;m.deletedFolders=sm.deletedFolders;writeSyncMeta(m);
+}
+function mergeCloudStates(local,remote,localFallback=0,remoteFallback=0){
+ local=local||{};remote=remote||{};let lm=stateSyncMeta(local,localFallback),rm=stateSyncMeta(remote,remoteFallback),mergedAt=Date.now();
+ let deletedDecks={...rm.deletedDecks};Object.entries(lm.deletedDecks).forEach(([k,v])=>deletedDecks[k]=Math.max(Number(deletedDecks[k]||0),Number(v||0)));
+ let lmap=new Map((Array.isArray(local.decks)?local.decks:[]).map(d=>[deckSyncId(d),d])),rmap=new Map((Array.isArray(remote.decks)?remote.decks:[]).map(d=>[deckSyncId(d),d])),ids=new Set([...lmap.keys(),...rmap.keys()]),decks=[];
+ ids.forEach(id=>{
+  let a=lmap.get(id),b=rmap.get(id),at=Number(a?._syncUpdatedAt||lm.updatedAt||localFallback||0),bt=Number(b?._syncUpdatedAt||rm.updatedAt||remoteFallback||0),dt=Number(deletedDecks[id]||0),pick=null;
+  if(dt>=Math.max(at,bt))return;
+  if(a&&!b)pick=a;else if(b&&!a)pick=b;else if(at>bt)pick=a;else if(bt>at)pick=b;else pick=(lm.updatedAt>=rm.updatedAt?a:b);
+  if(pick){let x={...pick};if(!x._syncUpdatedAt)x._syncUpdatedAt=Math.max(at,bt,mergedAt);decks.push(x)}
+ });
+ let folderUpdated={...rm.folderUpdated};Object.entries(lm.folderUpdated).forEach(([k,v])=>folderUpdated[k]=Math.max(Number(folderUpdated[k]||0),Number(v||0)));
+ let deletedFolders={...rm.deletedFolders};Object.entries(lm.deletedFolders).forEach(([k,v])=>deletedFolders[k]=Math.max(Number(deletedFolders[k]||0),Number(v||0)));
+ let lf=new Set(Array.isArray(local.folders)?local.folders:[]),rf=new Set(Array.isArray(remote.folders)?remote.folders:[]),allF=new Set([...lf,...rf]);decks.forEach(d=>{if(d.folder&&d.folder!=='Без папки')allF.add(d.folder)});
+ let fs=[];allF.forEach(f=>{let la=Number(lm.folderUpdated[f]||(lf.has(f)?lm.updatedAt:0)||0),ra=Number(rm.folderUpdated[f]||(rf.has(f)?rm.updatedAt:0)||0),add=Math.max(la,ra),del=Number(deletedFolders[f]||0);if(add>del||(!del&&(lf.has(f)||rf.has(f)))){fs.push(f);folderUpdated[f]=Math.max(Number(folderUpdated[f]||0),add||mergedAt)}});
+ let studySession=lm.updatedAt>=rm.updatedAt?local.studySession:remote.studySession;
+ return{decks,folders:fs,studySession:studySession||null,_sync:{version:2,updatedAt:mergedAt,deletedDecks,folderUpdated,deletedFolders}};
+}
+function prepareLocalSyncMigration(hasLocal){
+ let raw=localStorage.getItem(syncMetaKey()),m=readSyncMeta();if(raw)return;
+ let t=Date.now();ds.forEach(d=>{if(!d._syncUpdatedAt)d._syncUpdatedAt=t});folders.forEach(f=>m.folderUpdated[f]=t);m.version=2;m.localChangedAt=hasLocal?t:0;m.dirty=!!hasLocal;writeSyncMeta(m);persistLocalUserData();
+}
+async function postCloudState(state,baseRevision){
+ try{return await aiRequest('/api/state',{state,base_revision:Number(baseRevision||0)},45000)}catch(e){if(e.status===409&&e.data?.error==='STATE_CONFLICT')return{conflict:true,...e.data};throw e}
+}
+async function syncEngine(show=true){
+ if(show)setSyncStatus('Синхронізація…');
+ let meta=readSyncMeta(),remote=await aiRequest('/api/state',null,30000),remoteRev=Number(remote.revision||0),remoteTime=Date.parse(remote.updated_at||'')||0;
+ if(!remote.state){
+  let local=buildLocalState();
+  if(meta.dirty||stateHasData(local)){
+   let p=await postCloudState(local,0);
+   if(p.conflict){let merged=mergeCloudStates(local,p.state,meta.localChangedAt,Date.parse(p.updated_at||'')||0);applyCloudState(merged,p.revision,p.updated_at,true);return syncEngine(show)}
+   meta=readSyncMeta();meta.revision=Number(p.revision||1);meta.dirty=false;meta.lastSyncAt=Date.now();writeSyncMeta(meta);
+  }
+  setSyncStatus('Синхронізовано');return true;
+ }
+ if(remoteRev>Number(meta.revision||0)){
+  if(meta.dirty){
+   let merged=mergeCloudStates(buildLocalState(),remote.state,meta.localChangedAt,remoteTime);applyCloudState(merged,remoteRev,remote.updated_at,true);meta=readSyncMeta();
+  }else{applyCloudState(remote.state,remoteRev,remote.updated_at,false);setSyncStatus('Синхронізовано');render();return true}
+ }
+ meta=readSyncMeta();
+ if(meta.dirty||remoteRev<Number(meta.revision||0)){
+  let local=buildLocalState(),base=remoteRev;
+  let p=await postCloudState(local,base);
+  if(p.conflict){let merged=mergeCloudStates(local,p.state,meta.localChangedAt,Date.parse(p.updated_at||'')||0);applyCloudState(merged,p.revision,p.updated_at,true);let p2=await postCloudState(buildLocalState(),Number(p.revision||0));if(p2.conflict)throw Object.assign(new Error('STATE_CONFLICT'),{status:409,data:p2});p=p2}
+  meta=readSyncMeta();meta.revision=Number(p.revision||base+1);meta.dirty=false;meta.lastSyncAt=Date.now();writeSyncMeta(meta);persistLocalUserData();
+ }
+ setSyncStatus('Синхронізовано');render();return true;
+}
+async function pushCloudState(show=true){if(!currentUser||syncBusy)return false;syncBusy=true;try{return await syncEngine(show)}catch(e){setSyncStatus(e.status===409?'Конфлікт збережено без втрати даних. Повтори синхронізацію.':'Збережено на пристрої. Сервер недоступний.');return false}finally{syncBusy=false}}
+async function pullCloudState(){return pushCloudState(false)}
+async function syncNow(){return pushCloudState(true)}
 let deletingFolder=null;
 function askDeleteFolder(name){
  if(name==='Без папки')return;
@@ -1245,7 +1336,7 @@ function authToken(){return localStorage.getItem(AUTH_TOKEN_KEY)||''}
 function authHeaders(){let t=authToken();return t?{'Authorization':'Bearer '+t}:{}}
 function setAuthMode(m){authMode=m==='register'?'register':'login';$('authLoginTab').classList.toggle('on',authMode==='login');$('authRegisterTab').classList.toggle('on',authMode==='register');$('authSubmit').textContent=authMode==='login'?'Увійти':'Створити акаунт';$('authError').textContent='';if($('authNameField'))$('authNameField').style.display=authMode==='register'?'block':'none'}
 async function submitAuth(e){e.preventDefault();let err=$('authError'),btn=$('authSubmit');err.textContent='';btn.disabled=true;try{let d=await authRequest('/api/auth/'+authMode,{email:$('authEmail').value.trim(),password:$('authPassword').value,name:$('authName')?.value?.trim()||''});localStorage.setItem(AUTH_TOKEN_KEY,d.token);currentUser=d.user;await enterUser()}catch(x){let m=String(x.message||x);err.textContent=m==='EMAIL_EXISTS'?'Акаунт уже існує.':m==='INVALID_LOGIN'?'Неправильний email або пароль.':m==='WEAK_PASSWORD'?'Пароль — мінімум 8 символів.':'Не вдалося підключитися до Lexi Server.'}finally{btn.disabled=false}}
-async function authRequest(path,payload=null,timeout=30000){let base=getAIBackend(),c=new AbortController(),t=setTimeout(()=>c.abort(),timeout);try{let h={...authHeaders()};if(payload!==null)h['Content-Type']='application/json';let r=await fetch(base+path,{method:payload===null?'GET':'POST',headers:h,body:payload===null?undefined:JSON.stringify(payload),signal:c.signal});let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.error||('HTTP_'+r.status));return d}finally{clearTimeout(t)}}
+async function authRequest(path,payload=null,timeout=30000){let base=getAIBackend(),c=new AbortController(),t=setTimeout(()=>c.abort(),timeout);try{let h={...authHeaders()};if(payload!==null)h['Content-Type']='application/json';let r=await fetch(base+path,{method:payload===null?'GET':'POST',headers:h,body:payload===null?undefined:JSON.stringify(payload),signal:c.signal});let d={};try{d=await r.json()}catch{}if(!r.ok){let er=new Error(d.error||('HTTP_'+r.status));er.status=r.status;er.data=d;throw er}return d}finally{clearTimeout(t)}}
 function planInfo(){const p=currentUser?.plan||'free',trial=currentUser?.trial_active===true,admin=currentUser?.role==='admin';return{p,trial,admin,pro:admin||p==='pro'||trial}}
 function updatePlanUI(){let x=planInfo(),label=x.admin?'Lexi Pro · Developer':x.p==='pro'?'Lexi Pro':x.trial?`Lexi Pro · пробний період${currentUser?.trial_days_left!=null?' · '+currentUser.trial_days_left+' дн.':''}`:'Lexi Free';if($('planStatus'))$('planStatus').textContent=label}
 function openPro(){let x=planInfo();$('proModal').classList.add('on');$('proModalSub').textContent=x.admin?'Developer-акаунт має Lexi Pro назавжди.':x.p==='pro'?'Lexi Pro активний.':x.trial?`Пробний Lexi Pro активний${currentUser?.trial_days_left!=null?' ще '+currentUser.trial_days_left+' дн.':''}.`:'Пробний період завершився.';$('proActionWrap').style.display=x.pro?'none':'block';$('proNote').textContent=x.admin?'Оплата для developer-акаунта не потрібна.':x.p==='pro'?'Підписка активна.':x.trial?'Після пробного періоду Pro-функції блокуються без підписки.':'Оплата буде підключена перед публічним запуском.'}
@@ -1253,7 +1344,17 @@ function closePro(){$('proModal').classList.remove('on')}
 async function startProCheckout(){try{let d=await authRequest('/api/billing/checkout',{});if(d.url)location.href=d.url;else $('proNote').textContent='Оплата ще не підключена.'}catch(e){$('proNote').textContent='Оплата ще не підключена.'}}
 function requirePro(feature='Ця функція'){if(planInfo().pro)return true;openPro();$('proModalSub').textContent=feature+' доступна в Lexi Pro.';return false}
 
-async function enterUser(){$('authGate').classList.add('hidden');if($('accountEmail'))$('accountEmail').textContent=currentUser.email;updatePlanUI();let ld=JSON.parse(localStorage.getItem(userStorageKey('decks'))||'null'),lf=JSON.parse(localStorage.getItem(userStorageKey('folders'))||'null');try{let got=await pullCloudState();if(!got){let claimed=localStorage.getItem('lexi_legacy_claimed')==='1';if(!claimed&&LEGACY_DECKS.length){ds=LEGACY_DECKS;folders=LEGACY_FOLDERS;ensureCardIds();persistLocalUserData();await pushCloudState(false);localStorage.setItem('lexi_legacy_claimed','1')}else{ds=Array.isArray(ld)?ld:[];folders=Array.isArray(lf)?lf:[];ensureCardIds();if(ds.length||folders.length)await pushCloudState(false)}}}catch(e){ds=Array.isArray(ld)?ld:[];folders=Array.isArray(lf)?lf:[];ensureCardIds()}render()}
+async function enterUser(){
+ $('authGate').classList.add('hidden');if($('accountEmail'))$('accountEmail').textContent=currentUser.email;updatePlanUI();
+ let ld=null,lf=null;try{ld=JSON.parse(localStorage.getItem(userStorageKey('decks'))||'null');lf=JSON.parse(localStorage.getItem(userStorageKey('folders'))||'null')}catch(e){}
+ let hasUserLocal=Array.isArray(ld)||Array.isArray(lf),claimed=localStorage.getItem('lexi_legacy_claimed')==='1',usedLegacy=false;
+ if(hasUserLocal){ds=Array.isArray(ld)?ld:[];folders=Array.isArray(lf)?lf:[]}
+ else if(!claimed&&LEGACY_DECKS.length){ds=LEGACY_DECKS;folders=LEGACY_FOLDERS;usedLegacy=true}
+ else{ds=[];folders=[]}
+ ensureCardIds();prepareLocalSyncMigration(hasUserLocal||usedLegacy);render();
+ try{let ok=await pushCloudState(false);if(ok&&usedLegacy)localStorage.setItem('lexi_legacy_claimed','1')}catch(e){}
+ render();
+}
 async function restoreSession(){if(!authToken()){$('authGate').classList.remove('hidden');return}try{let d=await authRequest('/api/auth/me');currentUser=d.user;await enterUser()}catch(e){localStorage.removeItem(AUTH_TOKEN_KEY);$('authGate').classList.remove('hidden')}}
 async function logoutLexi(){try{await authRequest('/api/auth/logout',{})}catch{}localStorage.removeItem(AUTH_TOKEN_KEY);currentUser=null;ds=[];folders=[];closeSettings();$('authGate').classList.remove('hidden');setAuthMode('login');render()}
 
@@ -1262,7 +1363,7 @@ const AI_BACKEND_KEY='lexi_ai_backend';
 function normalizeAIBackend(v){
  return String(v||'').trim().replace(/\/+$/,'');
 }
-const LEXI_SERVER_DEFAULT='https://lexi-server.mrbiznesss52.workers.dev';
+const LEXI_SERVER_DEFAULT='https://lexi-server.mrbizness52.workers.dev';
 function getAIBackend(){let u=normalizeAIBackend(localStorage.getItem(AI_BACKEND_KEY)||LEXI_SERVER_DEFAULT);if(!u||u.includes('REPLACE-WITH-YOUR-WORKER'))throw new Error('NO_AI_BACKEND');return u;}
 function applyAIBackendFromLink(){
  try{
@@ -1300,7 +1401,7 @@ async function aiRequest(path,payload=null,timeout=45000){
   try{data=await r.json()}catch(e){}
   if(!r.ok){
    let er=new Error(String(data?.error||data?.code||('HTTP_'+r.status)));
-   er.status=r.status;throw er;
+   er.status=r.status;er.data=data;throw er;
   }
   return data||{};
  }catch(e){
@@ -2024,5 +2125,5 @@ function filterProgress(kind){
 }
 function closeProgress(){$('progressModal').classList.remove('on')}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
-document.addEventListener('keydown',e=>{if($('study').classList.contains('on')&&e.code==='Space'){e.preventDefault();reveal()}});applyAIBackendFromLink();render();restoreSession();
+window.addEventListener('online',()=>{if(currentUser)pushCloudState(false)});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&currentUser&&readSyncMeta().dirty)pushCloudState(false)});document.addEventListener('keydown',e=>{if($('study').classList.contains('on')&&e.code==='Space'){e.preventDefault();reveal()}});applyAIBackendFromLink();render();restoreSession();
 </script></body></html>
