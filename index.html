@@ -1110,6 +1110,13 @@ function save(){
 let activeFolder='Усі';
 function userStorageKey(k){return currentUser?`lexi_${k}_${currentUser.id}`:`lexi_${k}_guest`}
 function syncMetaKey(){return currentUser?`lexi_sync_meta_${currentUser.id}`:'lexi_sync_meta_guest'}
+function studySessionKey(){return currentUser?`lexi_active_session_${currentUser.id}`:'lexi_active_session_guest'}
+function migrateLegacyStudySession(){
+ if(!currentUser)return;
+ let legacy=localStorage.getItem('lexi_active_session');if(!legacy)return;
+ if(!localStorage.getItem(studySessionKey()))localStorage.setItem(studySessionKey(),legacy);
+ localStorage.removeItem('lexi_active_session');
+}
 function readSyncMeta(){
  let base={version:2,revision:0,dirty:false,localChangedAt:0,lastSyncAt:0,deletedDecks:{},folderUpdated:{},deletedFolders:{}};
  if(!currentUser)return base;
@@ -1139,7 +1146,9 @@ function touchSyncMetadata(){
  oldFolders.forEach(f=>{if(!newFolders.has(f))meta.deletedFolders[f]=Math.max(Number(meta.deletedFolders[f]||0),t)});
  meta.version=2;meta.localChangedAt=t;meta.dirty=true;writeSyncMeta(meta);
 }
-function saveAll(){if(!currentUser)return;touchSyncMetadata();persistLocalUserData();clearTimeout(syncTimer);syncTimer=setTimeout(()=>pushCloudState(false),700)}
+function scheduleCloudSync(){clearTimeout(syncTimer);syncTimer=setTimeout(()=>pushCloudState(false),700)}
+function markStudySessionDirty(){if(!currentUser)return;let m=readSyncMeta();m.version=2;m.localChangedAt=Date.now();m.dirty=true;writeSyncMeta(m);scheduleCloudSync()}
+function saveAll(){if(!currentUser)return;ensureCardIds();touchSyncMetadata();persistLocalUserData();scheduleCloudSync()}
 function setSyncStatus(t){let e=$('syncStatus');if(e)e.textContent=t||''}
 function stateSyncMeta(st,fallback=0){let x=st?._sync||{};return{updatedAt:Number(x.updatedAt||fallback||0),deletedDecks:{...(x.deletedDecks||{})},folderUpdated:{...(x.folderUpdated||{})},deletedFolders:{...(x.deletedFolders||{})}}}
 function buildLocalState(){
@@ -1148,7 +1157,7 @@ function buildLocalState(){
 }
 function applyCloudState(st,revision,updatedAt,dirty=false){
  st=st||{};ds=Array.isArray(st.decks)?st.decks:[];folders=Array.isArray(st.folders)?st.folders:[];
- if(st.studySession)localStorage.setItem('lexi_active_session',JSON.stringify(st.studySession));else localStorage.removeItem('lexi_active_session');
+ if(st.studySession)localStorage.setItem(studySessionKey(),JSON.stringify(st.studySession));else localStorage.removeItem(studySessionKey());
  ensureCardIds();persistLocalUserData();
  let sm=stateSyncMeta(st,Date.parse(updatedAt||'')||0),m=readSyncMeta();
  m.version=2;m.revision=Number(revision||0);m.dirty=!!dirty;m.localChangedAt=Number(sm.updatedAt||m.localChangedAt||0);m.lastSyncAt=Date.now();m.deletedDecks=sm.deletedDecks;m.folderUpdated=sm.folderUpdated;m.deletedFolders=sm.deletedFolders;writeSyncMeta(m);
@@ -1351,7 +1360,7 @@ async function enterUser(){
  if(hasUserLocal){ds=Array.isArray(ld)?ld:[];folders=Array.isArray(lf)?lf:[]}
  else if(!claimed&&LEGACY_DECKS.length){ds=LEGACY_DECKS;folders=LEGACY_FOLDERS;usedLegacy=true}
  else{ds=[];folders=[]}
- ensureCardIds();prepareLocalSyncMigration(hasUserLocal||usedLegacy);render();
+ migrateLegacyStudySession();ensureCardIds();prepareLocalSyncMigration(hasUserLocal||usedLegacy);render();
  try{let ok=await pushCloudState(false);if(ok&&usedLegacy)localStorage.setItem('lexi_legacy_claimed','1')}catch(e){}
  render();
 }
@@ -1888,15 +1897,16 @@ function beginFolderReview(limit){
 }
 function serializePrompt(p){return {cid:p.card._cid,reverse:!!p.reverse,intro:!!p.intro,firstPass:!!p.firstPass}}
 function saveStudySession(){
- if(!q.length||qi>=q.length){localStorage.removeItem('lexi_active_session');return}
- localStorage.setItem('lexi_active_session',JSON.stringify({
+ if(!q.length||qi>=q.length){localStorage.removeItem(studySessionKey());markStudySessionDirty();return}
+ localStorage.setItem(studySessionKey(),JSON.stringify({
    q:q.map(serializePrompt),qi,studyMode,deckId:cur?cur.id:null,folder:studyMode==='folder'?activeFolder:null,
    name:$('sn')?$('sn').textContent:''
  }));
+ markStudySessionDirty();
 }
-function clearStudySession(){localStorage.removeItem('lexi_active_session')}
+function clearStudySession(){localStorage.removeItem(studySessionKey());markStudySessionDirty()}
 function leaveStudy(){saveStudySession();go('home')}
-function getSavedSession(){try{return JSON.parse(localStorage.getItem('lexi_active_session')||'null')}catch(e){return null}}
+function getSavedSession(){try{return JSON.parse(localStorage.getItem(studySessionKey())||'null')}catch(e){return null}}
 function resumeStudy(){
  let s=getSavedSession();if(!s)return;
  let byId=new Map();ds.forEach(d=>d.cards.forEach(c=>byId.set(c._cid,c)));
